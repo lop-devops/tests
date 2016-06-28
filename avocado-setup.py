@@ -38,7 +38,6 @@ ENV_DEPS = CONFIGFILE.get('deps', 'packages').split(',')
 TEST_DIR = "%s/tests" % BASE_PATH
 DATA_DIR = "%s/data" % BASE_PATH
 LOG_DIR = "%s/results" % BASE_PATH
-AVOCADO_BIN = "/usr/bin/avocado"
 
 logger = logger_init(filepath=BASE_PATH).getlogger()
 
@@ -106,6 +105,19 @@ def is_present(package, package_list):
         return True
     else:
         return False
+
+
+def get_avocado_bin():
+    """
+    Get the avocado executable path
+    """
+    logger.debug("Running 'which avocado'")
+    status, avocado_binary = commands.getstatusoutput('which avocado')
+    if status != 0:
+        logger.error("avocado command not installed or not found in path")
+        sys.exit(1)
+    else:
+        return avocado_binary
 
 
 def env_check():
@@ -241,10 +253,11 @@ def bootstrap():
     for repo in REPOS:
         get_repo(repo, BASE_PATH, True)
     # bootstrap_vt
+    avocado_bin = get_avocado_bin()
     libvirt_cmd = '%s vt-bootstrap --vt-type libvirt \
-                    --vt-no-downloads --yes-to-all' % AVOCADO_BIN
+                    --vt-no-downloads --yes-to-all' % avocado_bin
     os.system(libvirt_cmd)
-    qemu_cmd = '%s vt-bootstrap --vt-type qemu --vt-no-downloads' % AVOCADO_BIN
+    qemu_cmd = '%s vt-bootstrap --vt-type qemu --vt-no-downloads' % avocado_bin
     os.system(qemu_cmd)
     for repo in TEST_REPOS:
         os.system('mkdir -p %s' % TEST_DIR)
@@ -260,14 +273,15 @@ def run_test(testsuite, args=None):
     conf = testsuite.config()
     test_type = testsuite.type
     vt_type = testsuite.vt_type
+    avocado_bin = get_avocado_bin()
     if 'guest' in test_type:
         logger.info("Running Guest Tests Suite %s", testsuite.shortname)
         cmd = "%s run --vt-type %s --vt-config %s \
-                --force-job-id %s" % (AVOCADO_BIN, vt_type, conf, testsuite.id)
+                --force-job-id %s" % (avocado_bin, vt_type, conf, testsuite.id)
     if 'host' in test_type:
         logger.info("Running Host Tests Suite %s", testsuite.shortname)
         cmd = "%s run  --force-job-id %s \
-                $(cat %s|grep -v '^#')" % (AVOCADO_BIN, testsuite.id, conf)
+                $(cat %s|grep -v '^#')" % (avocado_bin, testsuite.id, conf)
     if args:
         cmd += " %s" % args
     try:
