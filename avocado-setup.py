@@ -75,8 +75,9 @@ class TestSuite():
                                              self.shortname)
             if not os.path.isfile(local_cfg):
                 return self.conf
-            cfg = "%s/avocado-vt/backends/libvirt/cfg/%s.cfg" % (DATA_DIR,
-                                                                 self.shortname)
+            cfg = "%s/avocado-vt/backends/%s/cfg/%s.cfg" % (DATA_DIR,
+                                                            self.vt_type,
+                                                            self.shortname)
             cmd = 'cp -f %s %s' % (local_cfg, cfg)
             os.system(cmd)
             self.conf = cfg
