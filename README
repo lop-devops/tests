@@ -1,170 +1,235 @@
 1. OVERVIEW:
 
-    This repository contains a script to allow the user to set up the avocado test
-    framework and run a suite of avocado tests to help verify Host OS and Guest Virtual
-    Machine (VM) stability.
 
-    *As of June 2016, the preconfigured Host tests only support the most recent Fedora and CentOS
-    operating systems on POWER8 systems and the preconfigured Guest VM tests only support
-    Fedora 23 ppc64le.  This file will be updated as new host OS or Guest VM support is added.
+    This repository contains a wrapper script and configuration files to allow the user to set up 
+    the avocado test framework and run a suite of tests to help verify the OpenPOWER Host OS and 
+    Guest Virtual Machine (VM) stability.  The tests are integrated into teh avocado framework to 
+    increase the overall ease of use and to allow the open source community to easily add and run 
+    new tests within the suite.
+
+    See the REFERENCE section below for links to the avocado framework and avocado documentation.
 
 
-2. "avocado-setup.py" SCRIPT USAGE INFORMATION:
+2. OPERATING SYSTEM SUPPORT:
 
-    python avocado-setup.py -h
+    *Running this test suite against unsupported Host or Guest VM operating systems may result
+     in multiple test failures - proceed at your own risk.
 
-    USAGE: avocado-setup.py [-h] [--bootstrap] [--run-suite RUN_SUITE]
+    The preconfigured Host tests within the Host OS Test Suite currently support the following
+    operating systems on POWER8 hardware:
+      - Fedora 23
+      - Fedora 24
+      - CentOS 7.2
+
+    The preconfigured Guest VM tests within the Host OS Test Suite currently support the following
+    VM operating systems:
+      - Fedora 23 ppc64le
+
+    This section will be updated as new Host OS or Guest VM support is added. 
+
+3. PREREQUISITES:
+
+    The "avocado-setup.py" script must always be run as root or a user with root privileges 
+    or you risk permission denied errors.
+
+
+    GUEST VM INSTALL PREREQUISITES:
+
+      Before installing the Guest VM ("--install" option used), you must complete the following tasks:
+        1) Place the ISO image for the guest OS in the isos/ folder.  The install option 
+           currently supports only the Fedora 23 OS ISO & guest.
+
+           Link to the currently supported Guest VM Fedora ISO: 
+             >> https://dl.fedoraproject.org/pub/fedora-secondary/releases/23/Server/ppc64le/iso/Fedora-Server-DVD-ppc64le-23.iso 
+
+        2) Open firewall ports 8000-8020. They are needed by the avocado test framework 
+           to host the kickstart file for the guest using the default bridge network.
+
+           Suggested iptables command:  
+             >> iptables -t filter -I INPUT -p tcp -m state --dport 8000:8020 --state NEW -j ACCEPT
+
+
+    Host OS TESTS PREREQUISITES: 
+
+      Before running any host os tests, you must ensure the following prerequisites are installed 
+      or configured on your Host OS:
+
+      <LIST UNDER CONSTRUCTION>
+
+
+    GUEST VM TESTS PREREQUISITES: 
+
+      Before running any Guest VM tests, you must ensure the following prerequisites are installed 
+      or configured on your Guest VM OS:
+
+      <LIST UNDER CONSTRUCTION>
+
+
+4. "avocado-setup.py" SCRIPT USAGE INFORMATION:
+
+
+    It is highly recommended for users to execute the following command as root when running the 
+    test suite for the first time or you risk permission denied errors.  See the below information
+    for details:
+        >> python avocado-setup.py --run-suite host_sanity,guest_short_sanity --install
+
+
+    python avocado-setup.py [-h] [--bootstrap] [--run-suite RUN_SUITE]
                         [--output-dir OUTPUTDIR] [--verbose]
                         [--only-filter ONLY_FILTER] [--no-filter NO_FILTER]
                         [--additional-args ADD_ARGS] [--guest-os GUEST_OS]
                         [--vt VT_TYPE] [--install]
 
     OPTIONAL ARGUMENTS:
+
       -h, --help                  Show this help message and exit
       --bootstrap                 Prepare the environment for test
       --run-suite RUN_SUITE       Indicate which test suite(s) to run
       --output-dir OUTPUTDIR      Specify the custom test results directory
       --verbose                   Enable verbose output on the console
-      --only-filter ONLY_FILTER   Add additional specific avocado tests to the guest test suite.
-      --no-filter NO_FILTER       Exclude specific avocado tests from the guest test suite.
+      --only-filter ONLY_FILTER   Add additional specific avocado tests or features to the guest test suite.
+      --no-filter NO_FILTER       Exclude specific avocado tests or features from the guest test suite.
       --additional-args ADD_ARGS  Pass additional arguments to the command
       --guest-os GUEST_OS         Specify the Guest OS. Default: Fedora.23.ppc64le
       --vt VT_TYPE                Provide VT: qemu or libvirt  Default: libvirt
-      --install                   Install the Guest VM, if needed.
+      --install                   Install the Guest VM. Highly recommended for guest tests.
 
 
-    --bootstrap
-      Use this option to bootstrap the environment so that all of the required repositories
-      (avocado, avocado-vt, avocado-misc-tests) are downloaded, installed, and configured.
+    ARGUMENT DETAILS:
+
+      --bootstrap
+        Use this option to bootstrap the environment so that all of the required repositories 
+        (avocado, avocado-vt, avocado-misc-tests) are downloaded, installed, and configured.
 
 
-        Example command to bootstrap the test suite:
-            >> python avocado-setup.py --bootstrap
+          Example command to bootstrap the test suite: 
+              >> python avocado-setup.py --bootstrap
 
 
-    --run-suite RUN_SUITE
-      Use this option to reference one of the files in the config/tests/host/ or
-      config/tests/guest/{libvirt, qemu} folders. The RUN_SUITE value must be
-      prefixed based on which folder (guest or host) the config file is located
-      in.  Multiple RUN_SUITE values must be separated by a comma.
+      --run-suite RUN_SUITE
+        Use this option to reference one of the files in the config/tests/host/ or
+        config/tests/guest/{libvirt, qemu} folders. The RUN_SUITE value must be
+        prefixed based on which folder (guest or host) the config file is located
+        in.  Multiple RUN_SUITE values must be separated by a comma.
 
-      Preconfigured possible RUN_SUITE values:
+        Preconfigured possible RUN_SUITE values:
 
-        host_sanity -->  Uses the preconfigured file:
-                         config/tests/host/sanity.cfg
-                         This file lists the specific scripts that are run from
-                         the Avocado Test Framework "avocado-misc-tests"
-                         repository.
+          host_sanity -->  Uses the preconfigured file:
+                           config/tests/host/sanity.cfg
+                           This file lists the specific scripts that are run from
+                           the Avocado Test Framework "avocado-misc-tests"
+                           repository.
 
-        Example command to run the preconfigured Host OS test suite:
-            >> python avocado-setup.py --run-suite host_sanity
-
-
-        guest_sanity --> Uses the preconfigured file:
-                         config/tests/guest/libvirt/sanity.cfg
-                         This file runs a full series of regular and error
-                         injection tests against the specified guest VM using
-                         various virsh commands. This set of tests can take 4-5
-                         hours to complete.  The "variants:" section of the
-                         config file shows which commands are tested.
-
-        Example command to install a new Guest VM and run the preconfigured full
-        guest test suite against it:
-            >> python avocado-setup.py --run-suite guest_sanity
+            Example command to run the preconfigured Host OS test suite only: 
+                >> python avocado-setup.py --run-suite host_sanity
 
 
-        guest_short_sanity --> Uses the preconfigured file:
-                               config/tests/guest/libvirt/short_sanity.cfg
-                               This file runs a shorter series of tests against
-                               the specified guest VM using various virsh
-                               commands. This set of tests can take 1-2 hours to
-                               complete.  The "variants:" section of the config
-                               file shows which commands are tested.
+          guest_sanity --> Uses the preconfigured file:
+                           config/tests/guest/libvirt/sanity.cfg
+                           This file runs a full series of regular and error
+                           injection tests against the specified guest VM using
+                           various virsh commands. This set of tests can take 4-5
+                           hours to complete.  The "variants:" section of the
+                           config file shows which commands are tested.
 
-        Example command to run the preconfigured short guest test suite on an
-        already present Guest VM:
-            >> python avocado-setup.py --run-suite guest_short_sanity
-
-
-    --output-dir
-      Use this option to provide a custom directory for avocado test results.
-      The avocado test results are stored in the /current_run_path/results folder by default.
-
-      Example command to run the host and guest test suite and output the test results to the
-      /tmp folder:
-          >> python avocado-setup.py --run-suite guest_sanity,host_sanity --output-dir /tmp
-
-      NOTE: The avocado-setup.py log will always be generated at
-            /current_run_path/avocado-wrapper.log
+          Example command to install a new Guest VM and run the preconfigured full 
+          guest test suite against it: 
+              >> python avocado-setup.py --run-suite guest_sanity --install
 
 
-    --verbose
-      Use this option to display test verbose output on the console.
+          guest_short_sanity --> Uses the preconfigured file:
+                                 config/tests/guest/libvirt/short_sanity.cfg
+                                 This file runs a shorter series of tests against
+                                 the specified guest VM using various virsh
+                                 commands. This set of tests can take 1-2 hours to
+                                 complete.  The "variants:" section of the config
+                                 file shows which commands are tested.
 
-      Example command to install a new guest VM, run the full host & guest test suites, and
-      display verbose output on the console:
-          >> python avocado-setup.py --run-suite guest_sanity,host_sanity --install --verbose
-
-
-    --only-filter
-      Use this option to add additional specific avocado tests to the guest test suite.
-      This filter option is for advanced users of the avocado test framework who want to
-      temporarily adjust the tests being run without having to create or change configuration
-      files.
-
-      Example command to run the host & guest test suites and add "scsi virtio_net" filter to
-      the guest test suite:
-          >> python avocado-setup.py --run-suite guest_sanity,host_sanity --install --only-filter "scsi virtio_net"
-
-      IMPORTANT: Ensure you do not include a filter in the command that is a duplicate of a filter
-                 in the guest test suite being run.  This could cause avocado test errors.
+          Example command to install a new Guest VM and run the preconfigured short 
+          guest test suite against it: 
+              >> python avocado-setup.py --run-suite guest_short_sanity --install
 
 
-    --no-filter
-      Use this option to remove specific avocado tests from the guest test suite.
-      This filter option is for advanced users of the avocado test framework who want to
-      temporarily adjust the tests being run without having to create or change configuration
-      files.
+      --output-dir
+        Use this option to provide a custom directory for avocado test results.
+        The avocado test results are stored in the /current_run_path/results folder by default.
 
-      Example command to run the host & guest test suites and remove the "scsi virtio_net" filter
-      from the guest test suite:
-          >> python avocado-setup.py --run-suite guest_sanity,host_sanity --install --no-filter "scsi virtio_net"
+        Example command to run the host and guest test suite and output the test results to the
+        /tmp folder:
+            >> python avocado-setup.py --run-suite guest_sanity,host_sanity --output-dir /tmp
 
-      IMPORTANT: Ensure you do not include a filter in the command that is a duplicate of a filter
-                 in the guest test suite being run.  This could cause avocado test errors.
+        NOTE: The avocado-setup.py log will always be generated at 
+              /current_run_path/avocado-wrapper.log
 
 
-    --additional-args
-      Use this option to pass any additional avocado arguments to run tests. A
-      preconfigured set of Host or Guest VM tests has already been provided and
-      will run based on the value chosen for --run-suite. This additional option
-      is for advanced users of the avocado test framework who want to run
-      additional tests within that framework.
+      --verbose
+        Use this option to display test verbose output on the console.
+
+        Example command to install a new guest VM, run the full host & guest test suites, and 
+        display verbose output on the console: 
+            >> python avocado-setup.py --run-suite guest_sanity,host_sanity --install --verbose
 
 
-    --guest-os
-      Use this option to specify the guest os for the guest tests to run against.
-      By default the value is Fedora.23.ppc64le and this is the only value the
-      test framework is verified against.
+      --only-filter
+        Use this option to add additional specific avocado tests or features to the guest test suite. 
+        This filter option is for advanced users of the avocado test framework who want to 
+        temporarily adjust the tests being run without having to create or change configuration 
+        files.
+
+        Example command to run the host & guest test suites and add "scsi virtio_net" filter to 
+        the guest test suite: 
+            >> python avocado-setup.py --run-suite guest_sanity,host_sanity --install --only-filter "scsi virtio_net"
+
+        IMPORTANT: Ensure you do not include a filter in the command that is a duplicate of a filter 
+                   in the guest test suite being run.  This could cause avocado test errors. 
 
 
-    --vt {qemu or libvirt}
-      Use this option to choose the either the libvirt or qemu folder when guest_sanity
-      is the RUN_SUITE value.  By default, the libvirt folder is used.
+      --no-filter
+        Use this option to remove specific avocado tests or features from the guest test suite. 
+        This filter option is for advanced users of the avocado test framework who want to 
+        temporarily adjust the tests being run without having to create or change configuration 
+        files.
+
+        Example command to run the host & guest test suites and remove the "scsi virtio_net" filter 
+        from the guest test suite: 
+            >> python avocado-setup.py --run-suite guest_sanity,host_sanity --install --no-filter "scsi virtio_net"
+
+        IMPORTANT: Ensure you do not include a filter in the command that is a duplicate of a filter 
+                   in the guest test suite being run.  This could cause avocado test errors. 
 
 
-    --install
-      Use this option to install a guest VM image, typically the first time that you run
-      the script.  Before running the script, you must place the ISO image for the guest
-      OS in the isos/ folder.  The install option was tested with the Fedora 23 GA OS ISO
-      image file.
-
-      NOTE: Make sure to open firewall ports 8000-8020. They are needed by the avocado
-            test framework to host the kickstart file for the guest using the default
-            bridge network.
+      --additional-args
+        Use this option to pass any additional avocado arguments to run tests. A
+        preconfigured set of Host or Guest VM tests has already been provided and
+        will run based on the value chosen for --run-suite. This additional option
+        is for advanced users of the avocado test framework who want to run
+        additional tests within that framework.
 
 
-3. REFERENCES
+      --guest-os
+        Use this option to specify the guest os for the guest tests to run against.
+        By default, the value is Fedora.23.ppc64le.
+
+        IMPORTANT: It is highly recommended that you only specify a guest os from the list
+                   of supported guest vm's in the above Operating System Support section.
+
+
+      --vt {qemu or libvirt}
+        Use this option to choose either the libvirt or qemu folder when guest_sanity 
+        is the RUN_SUITE value.  By default, the libvirt folder is used.
+
+
+      --install
+        Use this option to install the guest VM before or during the first time that you 
+        run any guest test suite.  Advanced avocado users may install their guest vm
+        separately, but the install must follow the strict avocado configuration rules.
+      
+
+        IMPORTANT: Complete all Guest VM Install prerequisites listed in the Prerequisites
+                   section above BEFORE running this script with the "--install" option.
+
+
+5. REFERENCES
 
     Avocado Test Framework repositories on GitHub:
       https://github.com/avocado-framework
@@ -173,10 +238,10 @@
       http://avocado-framework.readthedocs.org
 
     OpenPOWER Host OS repositories on GitHub:
-      https://github.com/open-power-host-os/tests
+      https://github.com/open-power-host-os
 
 
-4. KNOWN ISSUES AND LIMITATION
+6. KNOWN ISSUES AND LIMITATION
 
     Refer to the Issues section of the repository, linked below, for details:
       https://github.com/open-power-host-os/tests/issues?q=is%3Aopen+is%3Aissue
