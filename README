@@ -24,6 +24,7 @@
     The preconfigured Guest VM tests within the Host OS Test Suite currently support the following
     VM operating systems:
       - Fedora 23 ppc64le
+      - Fedora 24 ppc64le
 
     This section will be updated as new Host OS or Guest VM support is added. 
 
@@ -37,10 +38,11 @@
 
       Before installing the Guest VM ("--install" option used), you must complete the following tasks:
         1) Place the ISO image for the guest OS in the isos/ folder.  The install option 
-           currently supports only the Fedora 23 OS ISO & guest.
+           currently supports only the Fedora 23 and 24 OS ISO & guest.
 
            Link to the currently supported Guest VM Fedora ISO: 
-             >> https://dl.fedoraproject.org/pub/fedora-secondary/releases/23/Server/ppc64le/iso/Fedora-Server-DVD-ppc64le-23.iso 
+             >> https://dl.fedoraproject.org/pub/fedora-secondary/releases/23/Server/ppc64le/iso/Fedora-Server-DVD-ppc64le-23.iso
+             >> https://dl.fedoraproject.org/pub/fedora-secondary/releases/24/Server/ppc64le/iso/Fedora-Server-dvd-ppc64le-24-1.2.iso
 
         2) Open firewall ports 8000-8020. They are needed by the avocado test framework 
            to host the kickstart file for the guest using the default bridge network.
@@ -90,7 +92,7 @@
       --only-filter ONLY_FILTER   Add additional specific avocado tests or features to the guest test suite.
       --no-filter NO_FILTER       Exclude specific avocado tests or features from the guest test suite.
       --additional-args ADD_ARGS  Pass additional arguments to the command
-      --guest-os GUEST_OS         Specify the Guest OS. Default: Fedora.23.ppc64le
+      --guest-os GUEST_OS         Specify the Guest OS. Default: Fedora.24.ppc64le
       --vt VT_TYPE                Provide VT: qemu or libvirt  Default: libvirt
       --install                   Install the Guest VM. Highly recommended for guest tests.
 
@@ -208,7 +210,7 @@
 
       --guest-os
         Use this option to specify the guest os for the guest tests to run against.
-        By default, the value is Fedora.23.ppc64le.
+        By default, the value is Fedora.24.ppc64le.
 
         IMPORTANT: It is highly recommended that you only specify a guest os from the list
                    of supported guest vm's in the above Operating System Support section.
