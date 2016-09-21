@@ -323,8 +323,8 @@ if __name__ == '__main__':
                         action='store', default=None,
                         help='Pass additional arguments to the command')
     parser.add_argument('--guest-os', dest='guest_os',
-                        action='store', default='Fedora.23.ppc64le',
-                        help='Provide Guest os: Default: Fedora.23.ppc64le')
+                        action='store', default='Fedora.24.ppc64le',
+                        help='Provide Guest os: Default: Fedora.24.ppc64le')
     parser.add_argument('--vt', dest='vt_type',
                         action='store', choices=['qemu', 'libvirt'],
                         default='libvirt',
