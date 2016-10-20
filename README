@@ -17,14 +17,13 @@
 
     The preconfigured Host tests within the Host OS Test Suite currently support the following
     operating systems on POWER8 hardware:
-      - Fedora 23
-      - Fedora 24
       - CentOS 7.2
 
     The preconfigured Guest VM tests within the Host OS Test Suite currently support the following
     VM operating systems:
       - Fedora 23 ppc64le
       - Fedora 24 ppc64le
+      - CentOS 72 ppc64le
 
     This section will be updated as new Host OS or Guest VM support is added. 
 
@@ -43,6 +42,8 @@
            Link to the currently supported Guest VM Fedora ISO: 
              >> https://dl.fedoraproject.org/pub/fedora-secondary/releases/23/Server/ppc64le/iso/Fedora-Server-DVD-ppc64le-23.iso
              >> https://dl.fedoraproject.org/pub/fedora-secondary/releases/24/Server/ppc64le/iso/Fedora-Server-dvd-ppc64le-24-1.2.iso
+
+           Note: This step is not required for CentOS 7.2 guest Installation, as it would pick up automatically.
 
         2) Open firewall ports 8000-8020. They are needed by the avocado test framework 
            to host the kickstart file for the guest using the default bridge network.
@@ -211,6 +212,7 @@
       --guest-os
         Use this option to specify the guest os for the guest tests to run against.
         By default, the value is Fedora.24.ppc64le.
+        Supported Guests: Fedora.24.ppc64le, Fedora.23.ppc64le, CentOS.7.2.ppc64le
 
         IMPORTANT: It is highly recommended that you only specify a guest os from the list
                    of supported guest vm's in the above Operating System Support section.
