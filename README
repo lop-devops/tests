@@ -3,7 +3,7 @@
 
     This repository contains a wrapper script and configuration files to allow the user to set up 
     the avocado test framework and run a suite of tests to help verify the OpenPOWER Host OS and 
-    Guest Virtual Machine (VM) stability.  The tests are integrated into teh avocado framework to 
+    Guest Virtual Machine (VM) stability.  The tests are integrated into the avocado framework to 
     increase the overall ease of use and to allow the open source community to easily add and run 
     new tests within the suite.
 
@@ -27,15 +27,20 @@
 
     This section will be updated as new Host OS or Guest VM support is added. 
 
+
 3. PREREQUISITES:
 
-    The "avocado-setup.py" script must always be run as root or a user with root privileges 
-    or you risk permission denied errors.
+    The "avocado-setup.py" script must always be run as root or as a user with root privileges 
+    or you risk permission denied errors. 
+
+    The script will check your environment for tooling prerequisites and issue a warning/error 
+    if any prerequisites are not installed on the system and cannot be installed automatically.
 
 
-    GUEST VM INSTALL PREREQUISITES:
+    GUEST VM INSTALL MANUAL PREREQUISITES:
 
-      Before installing the Guest VM ("--install" option used), you must complete the following tasks:
+      Before installing the Guest VM ("--install" option used), you must complete the following manual tasks:
+
         1) Place the ISO image for the guest OS in the isos/ folder.  The install option 
            currently supports only the Fedora 23 and 24 OS ISO & guest.
 
@@ -50,22 +55,6 @@
 
            Suggested iptables command:  
              >> iptables -t filter -I INPUT -p tcp -m state --dport 8000:8020 --state NEW -j ACCEPT
-
-
-    Host OS TESTS PREREQUISITES: 
-
-      Before running any host os tests, you must ensure the following prerequisites are installed 
-      or configured on your Host OS:
-
-      <LIST UNDER CONSTRUCTION>
-
-
-    GUEST VM TESTS PREREQUISITES: 
-
-      Before running any Guest VM tests, you must ensure the following prerequisites are installed 
-      or configured on your Guest VM OS:
-
-      <LIST UNDER CONSTRUCTION>
 
 
 4. "avocado-setup.py" SCRIPT USAGE INFORMATION:
@@ -240,6 +229,9 @@
 
     Avocado Test Framework documenation:
       http://avocado-framework.readthedocs.org
+
+    Community maintained Avocado Tests repository:
+      https://github.com/avocado-framework-tests/avocado-misc-tests
 
     OpenPOWER Host OS repositories on GitHub:
       https://github.com/open-power-host-os
