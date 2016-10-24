@@ -386,9 +386,9 @@ if __name__ == '__main__':
                         only_filter = args.guest_os
                     if only_filter:
                         additional_args += ' --vt-only-filter \
-                                        %s' % only_filter
+                                        "%s"' % only_filter
                 if args.no_filter:
-                    additional_args += ' --vt-no-filter %s' % args.no_filter
+                    additional_args += ' --vt-no-filter "%s"' % args.no_filter
             if args.add_args:
                 additional_args += " %s" % args.add_args
             run_test(Testsuites[test_suite], additional_args)
