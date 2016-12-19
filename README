@@ -222,7 +222,31 @@
                    section above BEFORE running this script with the "--install" option.
 
 
-5. REFERENCES
+5. CUSTOMIZING TEST SUITES
+
+   The Host and Guest sanity suites were created to include a varied collection of tests to validate new Host OS installations. 
+   There are additional tests that were not included in the sanity suites that users can optionally add if they wish.
+   
+   Adding Guest Sanity Tests:
+      You must be a proficient/advanced Avocado test suite user to correctly customize the Guest sanity suites since the syntax of these
+      configuration files is very specific.
+   
+   Adding Host Sanity Tests:
+      The Host sanity tests are listed in the config/tests/host/sanity.cfg file in this repository.  These are tests used directly 
+      from the avocado-misc-tests respository (see link in the REFERNCE LINKS section below).  If you want to run additional 
+      tests from this repository, simply add a new line in the sanity.cfg file with the location of the file within the 
+      avocado-misc-tests repository.
+      
+      For Example:  
+         - A user wishes to run ras.py test in the generic folder of the avocado-misc-tests repository. The purpose of this 
+         test is documented within the file itself.  
+         - The exact location of this test in the repository is "generic/ras.py".
+         - The user downloads this tests repository onto their system and edits the config/tests/host/sanity.cfg file.
+         - The user adds a line "avocado-misc-tests/generic/ras.py" (without the quotes) to the end of the config/tests/host/sanity.cfg 
+         file in this tests repository and saves the file.
+         - The user runs the host_sanity suite using the avocado-setup.py script explained in Section 4 above.
+
+6. REFERENCE LINKS
 
     Avocado Test Framework repositories on GitHub:
       https://github.com/avocado-framework
@@ -230,14 +254,14 @@
     Avocado Test Framework documenation:
       http://avocado-framework.readthedocs.org
 
-    Community maintained Avocado Tests repository:
+    Community maintained Avocado Tests repository (avocado-misc-tests):
       https://github.com/avocado-framework-tests/avocado-misc-tests
 
     OpenPOWER Host OS repositories on GitHub:
       https://github.com/open-power-host-os
 
 
-6. KNOWN ISSUES AND LIMITATION
+7. KNOWN ISSUES AND LIMITATION
 
-    Refer to the Issues section of the repository, linked below, for details:
+    Refer to the Issues section of this repository, linked below, for details on bugs, limitations, future enhancements, and investigations:
       https://github.com/open-power-host-os/tests/issues?q=is%3Aopen+is%3Aissue
