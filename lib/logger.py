@@ -10,8 +10,9 @@
 # GNU General Public License for more details.
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-# Author: Satheesh Rajendran<sathnaga@linux.vnet.ibm.com>
 #
+# Python wrapper for avocado
+# Author: Satheesh Rajendran<sathnaga@linux.vnet.ibm.com>
 
 
 import os
@@ -29,8 +30,12 @@ class logger_init:
             self.name = name
             self.filepath = filepath
             self.filename = None
-            formatter = logging.Formatter(
-                '%(asctime)s %(levelname)s: [%(filename)s:%(lineno)d] %(message)s')
+            file_formatter = logging.Formatter(
+                '%(asctime)s %(levelname)-8s: [%(filename)s:%(lineno)d] %(message)s',
+                '%Y-%m-%d %H:%M:%S')
+            console_formatter = logging.Formatter(
+                '%(asctime)s %(levelname)-8s: %(message)s',
+                '%H:%M:%S')
 
             if not self.filepath:
                 self.filename = "/tmp/%s.log" % self.name
@@ -40,11 +45,13 @@ class logger_init:
                 self.filename = "%s/%s.log" % (self.filepath, self.name)
 
             self.file_hdlr = logging.FileHandler(self.filename)
-            self.file_hdlr.setFormatter(formatter)
+            self.file_hdlr.setFormatter(file_formatter)
+            self.file_hdlr.setLevel(logging.DEBUG)
             self.logger.addHandler(self.file_hdlr)
 
             self.console_handler = logging.StreamHandler()
-            self.console_handler.setFormatter(formatter)
+            self.console_handler.setFormatter(console_formatter)
+            self.console_handler.setLevel(logging.INFO)
             self.logger.addHandler(self.console_handler)
             self.logger.handler_set = True
 
