@@ -384,11 +384,15 @@ def run_test(testsuite, avocado_bin):
 
     try:
         logger.info("Running: %s", cmd)
-        os.system(cmd)
+        status = os.system(cmd)
+        status = int(bin(int(status))[2:].zfill(16)[:-8], 2)
+        if status >= 2:
+            testsuite.runstatus("Not_Run", "Command execution failed")
+            return
     except Exception, error:
         logger.error("Running testsuite %s failed with error\n%s",
                      testsuite.name, error)
-        testsuite.runstatus("Not_Run", "command execution failed")
+        testsuite.runstatus("Not_Run", "Command execution failed")
         return
     logger.info('')
     result_link = "%s/job.log" % testsuite.jobdir()
