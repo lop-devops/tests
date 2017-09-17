@@ -95,7 +95,7 @@ class TestSuite():
             self.conf = local_cfg
         return self.conf
 
-    def runstatus(self, status, summary="Tests Executed", link=None):
+    def runstatus(self, status, summary="Tests Executed", link=''):
         self.run = status
         self.runsummary = summary
         self.runlink = link
@@ -654,13 +654,13 @@ if __name__ == '__main__':
                     time.sleep(int(args.interval))
 
         # List the final output
-        summary_output = ["Summary of test results can be found below:\n%-25s %-10s %-85s %-20s" % ('TestSuite', 'Testrun', 'ResultLink', 'Summary')]
-
+        summary_output = ["Summary of test results can be found below:\n%-75s %-10s %-20s" % ('TestSuite', 'TestRun', 'Summary')]
         for test_suite in Testsuites_list:
-            summary_output.append('%-25s %-10s %-85s %-20s' % (Testsuites[test_suite].name,
-                                                               Testsuites[test_suite].run,
-                                                               Testsuites[test_suite].runlink,
-                                                               Testsuites[test_suite].runsummary))
+            summary_output.append(' ')
+            summary_output.append('%-75s %-10s %-20s' % (Testsuites[test_suite].name,
+                                                         Testsuites[test_suite].run,
+                                                         Testsuites[test_suite].runsummary))
+            summary_output.append(Testsuites[test_suite].runlink)
         logger.info("\n".join(summary_output))
 
     if os.path.isdir("/tmp/mux/"):
