@@ -17,13 +17,14 @@
 
     The preconfigured Host tests within the Host OS Test Suite currently support the following
     operating systems on POWER8 hardware:
-      - CentOS 7.2
+      - CentOS 7.3
 
     The preconfigured Guest VM tests within the Host OS Test Suite currently support the following
     VM operating systems:
       - Fedora 23 ppc64le
       - Fedora 24 ppc64le
       - CentOS 72 ppc64le
+      - CentOS 73 ppc64le
 
     This section will be updated as new Host OS or Guest VM support is added. 
 
@@ -48,7 +49,7 @@
              >> https://dl.fedoraproject.org/pub/fedora-secondary/releases/23/Server/ppc64le/iso/Fedora-Server-DVD-ppc64le-23.iso
              >> https://dl.fedoraproject.org/pub/fedora-secondary/releases/24/Server/ppc64le/iso/Fedora-Server-dvd-ppc64le-24-1.2.iso
 
-           Note: This step is not required for CentOS 7.2 guest Installation, as it would pick up automatically.
+           Note: This step is not required for CentOS guest Installation, as it would pick up automatically.
 
         2) Open firewall ports 8000-8020. They are needed by the avocado test framework 
            to host the kickstart file for the guest using the default bridge network.
@@ -85,6 +86,9 @@
       --guest-os GUEST_OS         Specify the Guest OS. Default: Fedora.24.ppc64le
       --vt VT_TYPE                Provide VT: qemu or libvirt  Default: libvirt
       --install                   Install the Guest VM. Highly recommended for guest tests.
+      --no-download               Use this option to skip the guest image download (using preinstalled guest image)
+      --no-deps-check             Force wrapper to skip check for dependancy packages
+      --clean                     Remove/Uninstall autotest and avocado from system after test completion
 
 
     ARGUMENT DETAILS:
@@ -220,6 +224,20 @@
 
         IMPORTANT: Complete all Guest VM Install prerequisites listed in the Prerequisites
                    section above BEFORE running this script with the "--install" option.
+           
+           
+      --no-download
+        Use this option to skip the guest image download. This helps to save time when you are 
+        using an already preinstalled guest image.
+      
+      
+      --no-deps-check
+        Force wrapper to skip check for dependancy packages.  This helps to save time when re-running 
+        tests on a system where prereqs have already been checked once.
+      
+      
+      --clean
+        Remove/Uninstall autotest and avocado from system after test completion.  
 
 
 5. CUSTOMIZING TEST SUITES
@@ -245,7 +263,8 @@
          - The user adds a line "avocado-misc-tests/generic/ras.py" (without the quotes) to the end of the config/tests/host/sanity.cfg 
          file in this tests repository and saves the file.
          - The user runs the host_sanity suite using the avocado-setup.py script explained in Section 4 above.
-
+      
+      
 6. REFERENCE LINKS
 
     Avocado Test Framework repositories on GitHub:
