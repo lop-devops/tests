@@ -425,6 +425,7 @@ def edit_mux_file(test_config_name, mux_file_path, tmp_mux_path):
             input_dic[input_line[0]] = input_line[1]
     else:
         logger.debug("Section %s not found in input file", test_config_name)
+        shutil.copyfile(mux_file_path, tmp_mux_path)
         return
 
     with open(mux_file_path) as mux_fp:
