@@ -1,0 +1,4 @@
+[example]
+disk = '/home'
+wsize = '1m'
+period = '5'
