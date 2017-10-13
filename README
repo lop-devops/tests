@@ -42,12 +42,15 @@
 
       Before installing the Guest VM ("--install" option used), you must complete the following manual tasks:
 
-        1) Place the ISO image for the guest OS in the isos/ folder.  The install option 
+        1) Place the ISO image for the guest OS in the `isos/` folder.  The install option
            currently supports only the Fedora 23 and 24 OS ISO & guest.
 
-           Link to the currently supported Guest VM Fedora ISO: 
-             >> http://archives.fedoraproject.org/pub/archive/fedora-secondary/releases/23/Server/ppc64le/iso/Fedora-Server-DVD-ppc64le-23.iso
-             >> http://archives.fedoraproject.org/pub/archive/fedora-secondary/releases/24/Server/ppc64le/iso/Fedora-Server-dvd-ppc64le-24-1.2.iso
+           Download Fedora images and place them at the expected paths:
+             >> curl -o isos/Fedora-Server-DVD-ppc64le-23.iso http://archives.fedoraproject.org/pub/archive/fedora-secondary/releases/23/Server/ppc64le/iso/Fedora-Server-DVD-ppc64le-23.iso
+             >> curl -o isos/Fedora-Server-DVD-ppc64le-24.iso http://archives.fedoraproject.org/pub/archive/fedora-secondary/releases/24/Server/ppc64le/iso/Fedora-Server-dvd-ppc64le-24-1.2.iso
+
+           Make sure you run `python avocado-setup.py --bootstrap` every time a new image is added or updated under `isos/` directory.
+           Running bootstrap will copy all images to `data/avocado-vt/isos/linux/` directory.
 
            Note: This step is not required for CentOS guest Installation, as it would pick up automatically.
 
