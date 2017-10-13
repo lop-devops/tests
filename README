@@ -46,8 +46,8 @@
            currently supports only the Fedora 23 and 24 OS ISO & guest.
 
            Link to the currently supported Guest VM Fedora ISO: 
-             >> https://dl.fedoraproject.org/pub/fedora-secondary/releases/23/Server/ppc64le/iso/Fedora-Server-DVD-ppc64le-23.iso
-             >> https://dl.fedoraproject.org/pub/fedora-secondary/releases/24/Server/ppc64le/iso/Fedora-Server-dvd-ppc64le-24-1.2.iso
+             >> http://archives.fedoraproject.org/pub/archive/fedora-secondary/releases/23/Server/ppc64le/iso/Fedora-Server-DVD-ppc64le-23.iso
+             >> http://archives.fedoraproject.org/pub/archive/fedora-secondary/releases/24/Server/ppc64le/iso/Fedora-Server-dvd-ppc64le-24-1.2.iso
 
            Note: This step is not required for CentOS guest Installation, as it would pick up automatically.
 
