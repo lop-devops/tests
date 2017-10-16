@@ -37,6 +37,14 @@
     The script will check your environment for tooling prerequisites and issue a warning/error 
     if any prerequisites are not installed on the system and cannot be installed automatically.
 
+    Since `avocado-setup.py` is run with root privileges, you need to
+    update `/etc/libvirt/qemu.conf` file to instruct libvirt to spawn
+    qemu command with these permissions:
+
+        user = "root"
+        group = "root"
+
+    Restart libvirt service so changes can take effect: `systemctl restart libvirtd`.
 
     GUEST VM INSTALL MANUAL PREREQUISITES:
 
