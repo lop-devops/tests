@@ -12,20 +12,15 @@
 
 2. OPERATING SYSTEM SUPPORT:
 
-    *Running this test suite against untested Host or Guest VM operating systems may result
-     in multiple test failures - proceed at your own risk.
+    A POWER8 bare-metal system running OpenPOWER Host OS is required to execute any test suite in this 
+    repository (Host or Guest tests). Guest test cases were validated against the following ppc64le guests:
+    - Fedora 23
+    - Fedora 24
+    - CentOS 7.2
+    - CentOS 7.3
 
-    The preconfigured Host tests within the Host OS Test Suite were successfully tested on a HostOS
-    Host on POWER8 hardware.
-
-    The preconfigured Guest VM tests within the Host OS Test Suite were successfully tested on the following
-    VM operating systems:
-      - Fedora 23 ppc64le
-      - Fedora 24 ppc64le
-      - CentOS 72 ppc64le
-      - CentOS 73 ppc64le
-
-    This section will be updated as new Host OS or Guest VM testing is done. 
+    Running test cases against other host and guest operating systems may result in unexpected errors.
+    Proceed at your own risk.
 
 
 3. PREREQUISITES:
