@@ -299,9 +299,8 @@ def create_config(logdir):
     config.add_section('sysinfo.collect')
     config.set('sysinfo.collect', 'enabled', True)
     config.set('sysinfo.collect', 'profiler', True)
+    config.set('sysinfo.collect', 'per_test', True)
 
-    config.add_section('sysinfo.collectibles')
-    config.set('sysinfo.collectibles', 'per_test', True)
     with open(avocado_conf, 'w+') as conf:
         config.write(conf)
 
