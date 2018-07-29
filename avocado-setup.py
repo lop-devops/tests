@@ -571,6 +571,8 @@ if __name__ == '__main__':
         outputdir = os.path.join(BASE_PATH, 'results')
 
     additional_args += ' --job-results-dir %s' % outputdir
+    if '--execution-order' not in additional_args:
+        additional_args += ' --execution-order tests-per-variant'
 
     if (args.bootstrap or need_bootstrap()):
         create_config(outputdir)
