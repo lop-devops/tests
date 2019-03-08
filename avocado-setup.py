@@ -121,6 +121,7 @@ def get_dist():
         fd.close()
     return dist
 
+
 def get_dist_ver():
     """
     Return the distribution version ex: 15
@@ -137,6 +138,7 @@ def get_dist_ver():
                     pass
         fd.close()
     return re.match('(\d*)(\.)*(\d+)', dist_ver).group()
+
 
 def get_machine_type():
     """
@@ -275,19 +277,27 @@ def get_repo(repo, basepath, install=False):
     if os.path.isdir(repo_path):
         logger.info("Updating the repo: %s in %s", repo_name, repo_path)
         cmd = "cd %s;git remote update;git merge origin master" % repo_path
+        err_str = "Failed to update %s repository:" % repo_name
         try:
             status, output = commands.getstatusoutput(cmd)
-            logger.debug("Update Repo: %s\n%s", repo_name, output)
+            if status != 0:
+                logger.error("%s %s", err_str, output)
+                sys.exit(1)
+            logger.debug("%s", output)
         except Exception, error:
-            logger.error("Failed to update %s ", error)
+            logger.error("%s %s ", err_str, error)
             sys.exit(1)
     else:
+        err_str = "Failed to clone %s repository:" % repo_name
         cmd = "cd %s;git clone %s %s" % (basepath, repo, repo_name)
         try:
             status, output = commands.getstatusoutput(cmd)
-            logger.debug("Clone repo: %s\n%s", repo_name, output)
+            if status != 0:
+                logger.error("%s %s", err_str, output)
+                sys.exit(1)
+            logger.debug("%s", output)
         except Exception, error:
-            logger.error("Failed to clone %s", error)
+            logger.error("%s %s", err_str, error)
             sys.exit(1)
     if install:
         install_repo(repo_path)
@@ -301,15 +311,14 @@ def install_repo(path):
     logger.info("Installing repo: %s", path)
     cmd = "cd %s;make requirements;python setup.py install" % path
     try:
+        err_str = "Failed to install %s repository:" % path.split('/')[-1]
         status, output = commands.getstatusoutput(cmd)
-        logger.debug("%s", output)
         if status != 0:
-            logger.error("Error while installing: %s\n%s",
-                         path.split('/')[-1], status)
+            logger.error("%s %s", err_str, output)
             sys.exit(1)
+        logger.debug("%s", output)
     except Exception, error:
-        logger.error("Failed with exception during installing %s\n%s",
-                     path.split('/')[-1], error)
+        logger.error("%s %s", err_str, error)
         sys.exit(1)
 
 
@@ -366,11 +375,15 @@ def vt_bootstrap(guestos):
     logger.info("Downloading the guest os image")
     cmd = '%s vt-bootstrap --vt-guest-os %s --yes-to-all' % (avocado_bin,
                                                              guestos)
+    err_str = "Failed to Download Guest OS. Error:"
     try:
         status, output = commands.getstatusoutput(cmd)
+        if status != 0:
+            logger.info("%s %s", err_str, output)
+            sys.exit(1)
         logger.debug("%s", output)
     except Exception, error:
-        logger.error("Failed to Download Guest OS. Error: %s ", error)
+        logger.error("%s %s ", err_str, error)
         sys.exit(1)
 
 
@@ -389,20 +402,28 @@ def bootstrap():
     libvirt_cmd = '%s vt-bootstrap --vt-type libvirt \
                   --vt-update-providers --vt-skip-verify-download-assets \
                   --yes-to-all' % avocado_bin
+    err_str = "Failed to bootstrap vt libvirt. Error:"
     try:
         status, output = commands.getstatusoutput(libvirt_cmd)
+        if status != 0:
+            logger.error("%s %s", err_str, output)
+            sys.exit(1)
         logger.debug("%s", output)
     except Exception, error:
-        logger.error("Failed to bootstrap vt libvirt. Error: %s ", error)
+        logger.error("%s %s ", err_str, error)
         sys.exit(1)
     logger.info("Bootstrapping vt qemu")
     qemu_cmd = '%s vt-bootstrap --vt-type qemu --vt-update-providers \
-               --vt-skip-verify-download-assets' % avocado_bin
+               --vt-skip-verify-download-assets --yes-to-all' % avocado_bin
+    err_str = "Failed to bootstrap vt qemu. Error:"
     try:
         status, output = commands.getstatusoutput(qemu_cmd)
+        if status != 0:
+            logger.error("%s %s", err_str, output)
+            sys.exit(1)
         logger.debug("%s", output)
     except Exception, error:
-        logger.error("Failed to bootstrap vt qemu. Error: %s ", error)
+        logger.error("%s %s ", err_str, error)
         sys.exit(1)
     for repo in TEST_REPOS:
         try:
@@ -411,6 +432,7 @@ def bootstrap():
             logger.debug("%s", output)
         except Exception, error:
             logger.error("Failed to create test repo dir. Error: %s", error)
+            sys.exit(1)
         get_repo(repo, TEST_DIR)
 
 
@@ -461,12 +483,17 @@ def env_clean():
     """
     logger.info("Uninstalling avocado and autotest from environment")
     for package in ['avocado', 'avocado_plugins_vt', 'autotest']:
-        cmd = "yes|pip uninstall %s" % package
+        cmd = "pip uninstall %s -y --disable-pip-version-check" % package
+        err_str = "Error in removing package: %s" % package
         try:
-            (status, output) = commands.getstatusoutput(cmd)
+            status, output = commands.getstatusoutput(cmd)
+            if status != 0:
+                logger.error("%s %s", err_str, output)
+                sys.exit(1)
             logger.debug("%s", output)
-        except:
-            logger.error("Error in removing %s package: %s", package, output)
+        except Exception, error:
+            logger.error("%s %s", err_str, error)
+            sys.exit(1)
 
 
 def edit_mux_file(test_config_name, mux_file_path, tmp_mux_path):
@@ -563,6 +590,7 @@ def parse_test_config(test_config_file, avocado_bin):
             return [single_test_dic]
 
         return test_list
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
