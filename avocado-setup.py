@@ -133,7 +133,7 @@ def get_dist_ver():
                 except:
                     pass
         fd.close()
-    return dist_ver
+    return re.match('(\d*)(\.)*(\d+)', dist_ver).group()
 
 def get_machine_type():
     """
@@ -150,6 +150,25 @@ def get_machine_type():
                 machine_type = 'pHyp'
         fd.close()
     return machine_type
+
+
+def get_env_type():
+    """
+    Return what environment the system is: Distro, Version, Type
+    """
+    dist = get_dist()
+    dist_ver = get_dist_ver()
+    machine_type = get_machine_type()
+    env_type = dist
+    if os.uname()[-1] == 'ppc64':
+        env_type += 'be'
+    if dist == "sles" and dist_ver == "15":
+        env_type += dist_ver
+    elif dist == "rhel" and dist_ver == "8.0":
+        env_type += dist_ver
+    if machine_type == "pHyp":
+        env_type += "_pHyp"
+    return env_type
 
 
 def get_avocado_bin():
@@ -175,23 +194,15 @@ def env_check():
         logger.info("Creating temporary mux dir")
         os.makedirs("/tmp/mux/")
     not_found = []
-    dist = get_dist()
-    dist_ver = get_dist_ver()
-    machine_type = get_machine_type()
-    if os.uname()[-1] == 'ppc64':
-        dist += 'be'
-    if dist == "sles" and dist_ver == "15":
-        dist += dist_ver
-    if machine_type == "pHyp":
-        dist += "_pHyp"
-    if CONFIGFILE.has_section('deps_%s' % dist):
-        env_deps = CONFIGFILE.get('deps_%s' % dist, 'packages').split(',')
+    env_type = get_env_type()
+    if CONFIGFILE.has_section('deps_%s' % env_type):
+        env_deps = CONFIGFILE.get('deps_%s' % env_type, 'packages').split(',')
     else:
         # Not able to find the distribution, try use rpm
         env_deps = CONFIGFILE.get('deps_centos', 'packages').split(',')
 
     for dep in env_deps:
-        if 'ubuntu' in dist:
+        if 'ubuntu' in env_type:
             cmd = "dpkg -l|grep  ' %s'" % dep
         else:
             cmd = "rpm -qa|grep %s" % dep
@@ -506,7 +517,7 @@ def parse_test_config(test_config_file, avocado_bin):
         mux_flag = 0
         for line in test_config_contents.splitlines():
             test_dic = {}
-            if line.startswith("#"):
+            if line.startswith("#") or not line:
                 continue
             line = line.split()
             test_dic['test'] = line[0].strip('$')
