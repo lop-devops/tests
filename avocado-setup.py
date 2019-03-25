@@ -118,6 +118,39 @@ def get_dist():
         fd.close()
     return dist
 
+def get_dist_ver():
+    """
+    Return the distribution version ex: 15
+    """
+    dist_ver = None
+    if os.path.isfile('/etc/os-release'):
+        fd = open('/etc/os-release', 'r')
+        for line in fd.readlines():
+            if line.startswith("VERSION="):
+                try:
+                    line = line.replace('"', '')
+                    dist_ver = re.findall("VERSION=(\S+)", line)[0]
+                except:
+                    pass
+        fd.close()
+    return dist_ver
+
+def get_machine_type():
+    """
+    Return What kind of machine example: pHyp/PowerNV
+    """
+    machine_type = None
+    cpuinfo = '/proc/cpuinfo'
+    if os.path.isfile(cpuinfo):
+        fd = open(cpuinfo, 'r')
+        for line in fd.readlines():
+            if 'PowerNV' in line:
+                machine_type = 'PowerNV'
+            elif 'pSeries' in line:
+                machine_type = 'pHyp'
+        fd.close()
+    return machine_type
+
 
 def get_avocado_bin():
     """
@@ -143,8 +176,14 @@ def env_check():
         os.makedirs("/tmp/mux/")
     not_found = []
     dist = get_dist()
+    dist_ver = get_dist_ver()
+    machine_type = get_machine_type()
     if os.uname()[-1] == 'ppc64':
-        dist = '%sbe' % dist
+        dist += 'be'
+    if dist == "sles" and dist_ver == "15":
+        dist += dist_ver
+    if machine_type == "pHyp":
+        dist += "_pHyp"
     if CONFIGFILE.has_section('deps_%s' % dist):
         env_deps = CONFIGFILE.get('deps_%s' % dist, 'packages').split(',')
     else:
