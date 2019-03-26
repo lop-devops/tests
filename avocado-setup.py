@@ -28,9 +28,12 @@ from lib.logger import logger_init
 
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = "%s/config/wrapper/env.conf" % BASE_PATH
+NORUNTEST_PATH = "%s/config/wrapper/no_run_tests.conf" % BASE_PATH
 TEST_CONF_PATH = "%s/config/tests/" % BASE_PATH
 CONFIGFILE = ConfigParser.SafeConfigParser()
 CONFIGFILE.read(CONFIG_PATH)
+NORUNTESTFILE = ConfigParser.SafeConfigParser()
+NORUNTESTFILE.read(NORUNTEST_PATH)
 INPUTFILE = ConfigParser.SafeConfigParser()
 INPUTFILE.optionxform = str
 AVOCADO_REPO = CONFIGFILE.get('repo', 'avocado')
@@ -511,12 +514,17 @@ def parse_test_config(test_config_file, avocado_bin):
     if not os.path.isfile(test_config_file):
         logger.error("Test Config %s not present", test_config_file)
     else:
+        env_type = get_env_type()
+        if NORUNTESTFILE.has_section('norun_%s' % env_type):
+            norun_tests = NORUNTESTFILE.get('norun_%s' % env_type, 'tests').split(',')
         with open(test_config_file, 'r') as fp:
             test_config_contents = fp.read()
         test_list = []
         mux_flag = 0
         for line in test_config_contents.splitlines():
             test_dic = {}
+            if line in norun_tests:
+                continue
             if line.startswith("#") or not line:
                 continue
             line = line.split()

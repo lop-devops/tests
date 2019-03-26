@@ -281,9 +281,17 @@
          - The user runs the host_sanity suite using the avocado-setup.py script explained in Section 4 above.
          - If the user wishes to run a test with yaml file inputs, the yaml file can be specified in the same line in the cfg file,
          separated by a space. Refer config/tests/host/example.cfg for example.
+
+
+6. NO RUN TEST
+
+    Some tests have the potential of causing system crashes / hangs. Such test in cfg file hinders the run of tests that follow.
+    So, if such tests are identified and need to be "not run" for a particular environment (Since they can run fine on others),
+    we have a provision to mention such tests to not run.
+    Please have a look at "config/wrapper/no_run_test.conf"
+
       
-      
-6. REFERENCE LINKS
+7. REFERENCE LINKS
 
     Avocado Test Framework repositories on GitHub:
       https://github.com/avocado-framework
@@ -298,7 +306,7 @@
       https://github.com/open-power-host-os
 
 
-7. KNOWN ISSUES AND LIMITATION
+8. KNOWN ISSUES AND LIMITATION
 
     Refer to the Issues section of this repository, linked below, for details on bugs, limitations, future enhancements, and investigations:
       https://github.com/open-power-host-os/tests/issues?q=is%3Aopen+is%3Aissue
