@@ -15,11 +15,12 @@
 # Author: Satheesh Rajendran<sathnaga@linux.vnet.ibm.com>
 
 
+from builtins import object
 import os
 import logging
 
 
-class logger_init:
+class logger_init(object):
 
     def __init__(self, level=logging.DEBUG, name='avocado-wrapper', filepath=None):
         # Create the logger
