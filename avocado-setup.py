@@ -189,6 +189,27 @@ def get_avocado_bin():
         return avocado_binary
 
 
+def pip_install():
+    """
+    install package using pip
+    """
+    logger.info("install packages via pip interface")
+
+    pip_cmd = 'pip%s' % sys.version_info[0]
+
+    if CONFIGFILE.has_section('pip-package'):
+        package = CONFIGFILE.get('pip-package', 'package').split(',')
+        for dep in package:
+            cmd = '%s install %s' % (pip_cmd, dep)
+            status, output = commands.getstatusoutput(cmd)
+            if status != 0:
+                logger.error(
+                    'Package installation via pip failed: package  %s' % dep)
+                sys.exit(1)
+            else:
+                logger.debug("%s package installation successful" % dep)
+
+
 def env_check():
     """
     Check if the environment is proper
@@ -224,6 +245,7 @@ def env_check():
             logger.error("Please install following "
                          "dependancy packages %s", " ".join(not_found))
             sys.exit(1)
+    pip_install()
 
 
 def is_avocado_plugin_avl(plugin):
