@@ -1,0 +1,147 @@
+PCI INFO
+========
+
+USAGE:
+------
+# ./pci_info.py --help
+usage: pci_info.py [-h] [--pci-address PCI_ADDR] [--show-info]
+                   [--create-config] [--additional-params ADD_PARAMS]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --pci-address PCI_ADDR
+                        pci address, comma separated
+  --show-info           Show the pci details
+  --create-config       Create test config and input files
+  --additional-params ADD_PARAMS
+                        Additional parameters(key=value) to the input file,
+                        space separated
+
+
+
+ARGUMENT DETAILS:
+-----------------
+
+    --pci-address PCI_ADDR
+    Use this option to specify for which pci address the details should be collected.
+    Use comma separated values to provide multiple pci addresses.
+    If not provided, collects details for all pci addresses in the system.
+
+
+    --pci-address-blacklist PCI_ADDR_BLACKLIST
+    Use this option to leave out pci addresses from the list.
+    Use comma separated values to provide multiple pci addresses.
+
+
+    --show-info
+    Option to display collected details to the user or not.
+    The output is a python dictionary.
+
+
+    --create-config
+    Option to create config file if required.
+    Suppose the system has one pci card, which is nvme: Then, a cfg file named
+    io_nvme_<pci_address>_fvt.cfg is generated in config/tests/host/
+    
+    It also generates input file (Check --input-file section of main README).
+    The details for input file is got via config file at config/wrapper/pci_input_cfg.txt
+    The details are dynamic, and the dictionary values can be used to edit the input config
+    file.
+    Example:
+        1. Suppose the input file needs to be updated with "disk = /dev/mapper/mpathac", ie,
+        one of the multipath disk, which is the value of the key "mpath_disks" on the
+        pci dictionary.
+        So, the conf file "config/wrapper/pci_input_cfg.txt" needs to have:
+            disk = mpath_disks:0
+
+        2. Suppose the input file needs to be updated with "wwids = <multiple / all wwids>",
+        which is the value of the key "mpath_wwids" on the pci dictionary.
+        So, the conf file "config/wrapper/pci_input_cfg.txt" needs to have:
+            wwids = mpath_wwids:all
+
+        3. Suppose the input file needs to be updated with "MODULES = lpfc",
+        which is the value of the key "driver" on the pci dictionary.
+        So, the conf file "config/wrapper/pci_input_cfg.txt" needs to have:
+            MODULES = driver
+
+
+    --additional-params ADD_PARAMS
+    If the collected information is not enough for some tests, this provision can be used
+    to provide additional static arguments. They are key=value pairs, separated by space.
+    Note: At this time, these additional params are for all test configs.
+
+
+
+EXAMPLE:
+--------
+# ./pci_info.py --pci-address "0202:60:00,0102:60:00" --show-info
+
+[{'adapter_description': 'Emulex Corporation Lancer Gen6: LPe32000 Fibre Channel Host Adapter',
+  'adapter_id': '10df:e300:1014:0615',
+  'adapter_type': 'fc',
+  'class': 'scsi_host',
+  'disks': ['/dev/sdaa',
+            '/dev/sdab',
+            '/dev/sdx',
+            '/dev/sdy',
+            '/dev/sdg',
+            '/dev/sdd',
+            '/dev/sde',
+            '/dev/sdc'],
+  'driver': 'lpfc',
+  'firmware': '11.4.415.5',
+  'functions': ['0102:60:00.0', '0102:60:00.1'],
+  'interfaces': ['host11', 'host13'],
+  'is_root_disk': False,
+  'mpath_disks': [],
+  'mpath_wwids': [],
+  'pci_root': '0102:60:00',
+  'slot': 'U78CD.001.FZHV738-P1-C2'},
+ {'adapter_description': 'QLogic Corp. ISP2532-based 8Gb Fibre Channel to PCI Express HBA',
+  'adapter_id': '1077:2532:1014:f304',
+  'adapter_type': 'fc',
+  'class': 'scsi_host',
+  'disks': ['/dev/sdbu',
+            '/dev/sdbt',
+            '/dev/sdbv',
+            '/dev/sdbq',
+            '/dev/sdar',
+            '/dev/sdas',
+            '/dev/sdz',
+            '/dev/sdj'],
+  'driver': 'qla2xxx',
+  'firmware': '8.07.00',
+  'functions': ['0202:60:00.0', '0202:60:00.1'],
+  'interfaces': ['host17', 'host15'],
+  'is_root_disk': False,
+  'mpath_disks': ['/dev/mapper/mpathac',
+                  '/dev/mapper/mpathae'],
+  'mpath_wwids': ['360050768028383d7f0000000000000a5',
+                  '360050768028383d7f000000000000033'],
+  'pci_root': '0202:60:00',
+  'slot': 'U78CD.001.FZHV738-P2-C2'}]
+
+
+# ./pci_info.py --pci-address "0202:60:00,0102:60:00" --create-config --additional-params "peer_ip=131.1.1.89   peer_interfaces=eth1,eth2"
+peer_ip=131.1.1.89   peer_interfaces=eth1,eth2
+['peer_ip=131.1.1.89', 'peer_interfaces=eth1,eth2']
+--run-suite host_io_fc_0102_60_00_fvt,host_io_fc_0202_60_00_fvt --input-file io_input.txt
+
+
+# cat io_input.txt
+[io_fc_0102_60_00_fvt]
+disks = ""
+wwids = ""
+pci_device = "0102:60:00.0"
+MODULES = "lpfc"
+peer_ip = "131.1.1.89"
+peer_interfaces = "eth1,eth2"
+
+[io_fc_0202_60_00_fvt]
+disk = "/dev/mapper/mpathac"
+disks = "/dev/mapper/mpathac,/dev/mapper/mpathae"
+wwids = "360050768028383d7f0000000000000a5,360050768028383d7f000000000000033"
+pci_device = "0202:60:00.0"
+MODULES = "qla2xxx"
+peer_ip = "131.1.1.89"
+peer_interfaces = "eth1,eth2"
