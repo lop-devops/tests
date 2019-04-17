@@ -511,7 +511,6 @@ def env_clean():
             status, output = commands.getstatusoutput(cmd)
             if status != 0:
                 logger.error("%s %s", err_str, output)
-                sys.exit(1)
             logger.debug("%s", output)
         except Exception, error:
             logger.error("%s %s", err_str, error)
