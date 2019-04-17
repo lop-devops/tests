@@ -14,14 +14,19 @@
 # Python wrapper for avocado
 # Author: Satheesh Rajendran<sathnaga@linux.vnet.ibm.com>
 
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+
 import os
 import shutil
 import time
 import re
-import commands
+import subprocess
 import sys
 import argparse
-import ConfigParser
+import configparser
 import binascii
 from shutil import copyfile
 from lib.logger import logger_init
@@ -30,11 +35,11 @@ BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = "%s/config/wrapper/env.conf" % BASE_PATH
 NORUNTEST_PATH = "%s/config/wrapper/no_run_tests.conf" % BASE_PATH
 TEST_CONF_PATH = "%s/config/tests/" % BASE_PATH
-CONFIGFILE = ConfigParser.SafeConfigParser()
+CONFIGFILE = configparser.SafeConfigParser()
 CONFIGFILE.read(CONFIG_PATH)
-NORUNTESTFILE = ConfigParser.SafeConfigParser()
+NORUNTESTFILE = configparser.SafeConfigParser()
 NORUNTESTFILE.read(NORUNTEST_PATH)
-INPUTFILE = ConfigParser.SafeConfigParser()
+INPUTFILE = configparser.SafeConfigParser()
 INPUTFILE.optionxform = str
 AVOCADO_REPO = CONFIGFILE.get('repo', 'avocado')
 AVOCADO_VT_REPO = CONFIGFILE.get('repo', 'avocado_vt')
@@ -45,6 +50,7 @@ DATA_DIR = "%s/data" % BASE_PATH
 LOG_DIR = "%s/results" % BASE_PATH
 
 logger = logger_init(filepath=BASE_PATH).getlogger()
+version = sys.version_info[0]
 
 
 class TestSuite():
@@ -71,7 +77,7 @@ class TestSuite():
 
     def jobdir(self):
         cmd = 'grep %s %s/*/id|grep job-' % (self.id, self.resultdir)
-        status, output = commands.getstatusoutput(cmd)
+        status, output = subprocess.getstatusoutput(cmd)
         if status == 0:
             self.job_dir = "/".join(output.split('/')[:-1])
         return self.job_dir
@@ -181,7 +187,7 @@ def get_avocado_bin():
     Get the avocado executable path
     """
     logger.debug("Running 'which avocado'")
-    status, avocado_binary = commands.getstatusoutput('which avocado')
+    status, avocado_binary = subprocess.getstatusoutput('which avocado')
     if status != 0:
         logger.error("avocado command not installed or not found in path")
         sys.exit(1)
@@ -193,15 +199,21 @@ def pip_install():
     """
     install package using pip
     """
+    #This is required only for Python2
+    if version != 2:
+        return
     logger.info("install packages via pip interface")
 
-    pip_cmd = 'pip%s' % sys.version_info[0]
+    pip_cmd = 'pip%s' % version
 
     if CONFIGFILE.has_section('pip-package'):
         package = CONFIGFILE.get('pip-package', 'package').split(',')
         for dep in package:
+            #Python3.6 doesn't require 'enum' package
+            if version == 3 and dep == 'enum':
+                continue
             cmd = '%s install %s' % (pip_cmd, dep)
-            status, output = commands.getstatusoutput(cmd)
+            status, output = subprocess.getstatusoutput(cmd)
             if status != 0:
                 logger.error(
                     'Package installation via pip failed: package  %s' % dep)
@@ -232,7 +244,7 @@ def env_check():
             cmd = "dpkg -l|grep  ' %s'" % dep
         else:
             cmd = "rpm -qa|grep %s" % dep
-        status, output = commands.getstatusoutput(cmd)
+        status, output = subprocess.getstatusoutput(cmd)
         if status != 0:
             not_found.append(dep)
     if not_found:
@@ -245,7 +257,7 @@ def env_check():
             logger.error("Please install following "
                          "dependancy packages %s", " ".join(not_found))
             sys.exit(1)
-    pip_install()
+    #pip_install()
 
 
 def is_avocado_plugin_avl(plugin):
@@ -253,7 +265,7 @@ def is_avocado_plugin_avl(plugin):
     Check if the given avocado plugin installed
     """
     cmd = 'avocado plugins|grep %s' % plugin
-    status, output = commands.getstatusoutput(cmd)
+    status, output = subprocess.getstatusoutput(cmd)
     if status != 0:
         logger.warning("Avocado %s plugin not installed", plugin)
         return False
@@ -269,7 +281,7 @@ def need_bootstrap():
     logger.debug("Check if bootstrap required")
     needsBootstrap = False
     # Check for avocado
-    status, output = commands.getstatusoutput('avocado')
+    status, output = subprocess.getstatusoutput('avocado')
     if 'command not ' in output:
         logger.info("Avocado needs to be installed")
         needsBootstrap = True
@@ -301,24 +313,24 @@ def get_repo(repo, basepath, install=False):
         cmd = "cd %s;git remote update;git merge origin master" % repo_path
         err_str = "Failed to update %s repository:" % repo_name
         try:
-            status, output = commands.getstatusoutput(cmd)
+            status, output = subprocess.getstatusoutput(cmd)
             if status != 0:
                 logger.error("%s %s", err_str, output)
                 sys.exit(1)
             logger.debug("%s", output)
-        except Exception, error:
+        except Exception as error:
             logger.error("%s %s ", err_str, error)
             sys.exit(1)
     else:
         err_str = "Failed to clone %s repository:" % repo_name
         cmd = "cd %s;git clone %s %s" % (basepath, repo, repo_name)
         try:
-            status, output = commands.getstatusoutput(cmd)
+            status, output = subprocess.getstatusoutput(cmd)
             if status != 0:
                 logger.error("%s %s", err_str, output)
                 sys.exit(1)
             logger.debug("%s", output)
-        except Exception, error:
+        except Exception as error:
             logger.error("%s %s", err_str, error)
             sys.exit(1)
     if install:
@@ -331,15 +343,15 @@ def install_repo(path):
     :param repo: repository path
     """
     logger.info("Installing repo: %s", path)
-    cmd = "cd %s;make requirements;python setup.py install" % path
+    cmd = "cd %s;make requirements;python%s setup.py install" % (path, version)
     try:
         err_str = "Failed to install %s repository:" % path.split('/')[-1]
-        status, output = commands.getstatusoutput(cmd)
+        status, output = subprocess.getstatusoutput(cmd)
         if status != 0:
             logger.error("%s %s", err_str, output)
             sys.exit(1)
         logger.debug("%s", output)
-    except Exception, error:
+    except Exception as error:
         logger.error("%s %s", err_str, error)
         sys.exit(1)
 
@@ -353,8 +365,8 @@ def install_optional_plugin(plugin):
         logger.info("Installing optional plugin: %s", plugin)
         plugin_path = "%s/avocado/optional_plugins/%s" % (BASE_PATH, plugin)
         if os.path.isdir(plugin_path):
-            cmd = "cd %s;python setup.py install" % plugin_path
-            status, output = commands.getstatusoutput(cmd)
+            cmd = "cd %s;python%s setup.py install" % (plugin_path, version)
+            status, output = subprocess.getstatusoutput(cmd)
             if status != 0:
                 logger.error("Error installing optional plugin: %s", plugin)
         else:
@@ -371,7 +383,7 @@ def create_config(logdir):
     :param logdir: Log directory
     """
     logger.info("Creating Avocado Config")
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     os.system("mkdir -p ~/.config/avocado")
     avocado_conf = '%s/.config/avocado/avocado.conf' % os.environ['HOME']
     config.add_section('datadir.paths')
@@ -381,9 +393,9 @@ def create_config(logdir):
     config.set('datadir.paths', 'logs_dir', logdir)
 
     config.add_section('sysinfo.collect')
-    config.set('sysinfo.collect', 'enabled', True)
-    config.set('sysinfo.collect', 'profiler', True)
-    config.set('sysinfo.collect', 'per_test', True)
+    config.set('sysinfo.collect', 'enabled', 'True')
+    config.set('sysinfo.collect', 'profiler', 'True')
+    config.set('sysinfo.collect', 'per_test', 'True')
 
     with open(avocado_conf, 'w+') as conf:
         config.write(conf)
@@ -399,12 +411,12 @@ def vt_bootstrap(guestos):
                                                              guestos)
     err_str = "Failed to Download Guest OS. Error:"
     try:
-        status, output = commands.getstatusoutput(cmd)
+        status, output = subprocess.getstatusoutput(cmd)
         if status != 0:
             logger.info("%s %s", err_str, output)
             sys.exit(1)
         logger.debug("%s", output)
-    except Exception, error:
+    except Exception as error:
         logger.error("%s %s ", err_str, error)
         sys.exit(1)
 
@@ -426,12 +438,12 @@ def bootstrap():
                   --yes-to-all' % avocado_bin
     err_str = "Failed to bootstrap vt libvirt. Error:"
     try:
-        status, output = commands.getstatusoutput(libvirt_cmd)
+        status, output = subprocess.getstatusoutput(libvirt_cmd)
         if status != 0:
             logger.error("%s %s", err_str, output)
             sys.exit(1)
         logger.debug("%s", output)
-    except Exception, error:
+    except Exception as error:
         logger.error("%s %s ", err_str, error)
         sys.exit(1)
     logger.info("Bootstrapping vt qemu")
@@ -439,20 +451,20 @@ def bootstrap():
                --vt-skip-verify-download-assets --yes-to-all' % avocado_bin
     err_str = "Failed to bootstrap vt qemu. Error:"
     try:
-        status, output = commands.getstatusoutput(qemu_cmd)
+        status, output = subprocess.getstatusoutput(qemu_cmd)
         if status != 0:
             logger.error("%s %s", err_str, output)
             sys.exit(1)
         logger.debug("%s", output)
-    except Exception, error:
+    except Exception as error:
         logger.error("%s %s ", err_str, error)
         sys.exit(1)
     for repo in TEST_REPOS:
         try:
             logger.info("creating test repo dir %s", TEST_DIR)
-            status, output = commands.getstatusoutput('mkdir -p %s' % TEST_DIR)
+            status, output = subprocess.getstatusoutput('mkdir -p %s' % TEST_DIR)
             logger.debug("%s", output)
-        except Exception, error:
+        except Exception as error:
             logger.error("Failed to create test repo dir. Error: %s", error)
             sys.exit(1)
         get_repo(repo, TEST_DIR)
@@ -488,7 +500,7 @@ def run_test(testsuite, avocado_bin):
         if status >= 2:
             testsuite.runstatus("Not_Run", "Command execution failed")
             return
-    except Exception, error:
+    except Exception as error:
         logger.error("Running testsuite %s failed with error\n%s",
                      testsuite.name, error)
         testsuite.runstatus("Not_Run", "Command execution failed")
@@ -503,17 +515,20 @@ def env_clean():
     """
     Clean/uninstall avocado and autotest
     """
+    # This is required only for Python2
+    if version != 2:
+        return
     logger.info("Uninstalling avocado and autotest from environment")
     for package in ['avocado', 'avocado_plugins_vt', 'autotest']:
-        cmd = "pip uninstall %s -y --disable-pip-version-check" % package
+        cmd = "pip%s uninstall %s -y --disable-pip-version-check" % (version, package)
         err_str = "Error in removing package: %s" % package
         try:
-            status, output = commands.getstatusoutput(cmd)
+            status, output = subprocess.getstatusoutput(cmd)
             if status != 0:
                 logger.error("%s %s", err_str, output)
                 sys.exit(1)
             logger.debug("%s", output)
-        except Exception, error:
+        except Exception as error:
             logger.error("%s %s", err_str, error)
             sys.exit(1)
 
@@ -586,7 +601,7 @@ def parse_test_config(test_config_file, avocado_bin):
             else:
                 test_dic['name'] = test_dic['name'].split(".")[0]
             cmd = "%s list %s 2> /dev/null" % (avocado_bin, test_dic['test'])
-            (status, output) = commands.getstatusoutput(cmd)
+            (status, output) = subprocess.getstatusoutput(cmd)
             logger.debug("%s does not exist", test_dic['test'])
             if status != 0:
                 continue
