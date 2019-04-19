@@ -51,7 +51,7 @@ class TestSuite():
     guest_add_args = ""
     host_add_args = ""
 
-    def __init__(self, name, resultdir, vt_type, test=None, mux=None):
+    def __init__(self, name, resultdir, vt_type, test=None, mux=None, args=None):
         self.id = binascii.b2a_hex(os.urandom(20))
         self.name = str(name)
         self.shortname = "_".join(self.name.split('_')[1:])
@@ -61,6 +61,7 @@ class TestSuite():
         self.conf = None
         self.test = test
         self.mux = mux
+        self.args = args
         self.run = "Not_Run"
         self.runsummary = None
         self.runlink = None
@@ -480,6 +481,8 @@ def run_test(testsuite, avocado_bin):
         if testsuite.mux:
             cmd += " -m %s" % os.path.join(TEST_DIR, testsuite.mux)
         cmd += " --force-job-id %s %s" % (testsuite.id, TestSuite.host_add_args)
+        if testsuite.args:
+            cmd += testsuite.args
 
     try:
         logger.info("Running: %s", cmd)
@@ -601,6 +604,8 @@ def parse_test_config(test_config_file, avocado_bin):
                     tmp_mux_path = os.path.join('/tmp/mux/', "%s_%s.yaml" % (test_config_name, test_dic['name']))
                     edit_mux_file(test_config_name, mux_file, tmp_mux_path)
                     test_dic['mux'] = tmp_mux_path
+            if len(line) > 2:
+                test_dic['args'] = " --execution-order %s " % line[2]
             test_list.append(test_dic)
         if mux_flag == 0:
             single_test_dic = {}
@@ -739,12 +744,14 @@ if __name__ == '__main__':
                                                      "Config file not present")
                     continue
                 for test in test_list:
-                    if not test.has_key('mux'):
-                        test['mux'] = ''
+                    for l_key in ['mux', 'args']:
+                        if not test.has_key(l_key):
+                            test[l_key] = ''
                     test_suite_name = "%s_%s" % (test_suite, test['name'])
                     Testsuites[test_suite_name] = TestSuite(test_suite_name,
                                                             outputdir, args.vt_type,
-                                                            test['test'], test['mux'])
+                                                            test['test'], test['mux'],
+                                                            test['args'])
                     Testsuites_list.append(test_suite_name)
 
             if 'guest' in test_suite:
