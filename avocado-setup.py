@@ -645,8 +645,8 @@ if __name__ == '__main__':
                         action='store', default="",
                         help='Pass additional arguments to the command')
     parser.add_argument('--guest-os', dest='guest_os',
-                        action='store', default='CentOS.7.3.ppc64le',
-                        help='Provide Guest os: Default: CentOS.7.3.ppc64le')
+                        action='store', default='JeOS.27.ppc64le',
+                        help='Provide Guest os: Default: JeOS.27.ppc64le')
     parser.add_argument('--vt', dest='vt_type',
                         action='store', choices=['qemu', 'libvirt'],
                         default='libvirt',
@@ -678,10 +678,13 @@ if __name__ == '__main__':
         outputdir = os.path.join(BASE_PATH, 'results')
 
     additional_args += ' --job-results-dir %s' % outputdir
-
+    bootstraped = False
     if (args.bootstrap or need_bootstrap()):
         create_config(outputdir)
         bootstrap()
+        bootstraped = True
+        if args.guest_os and not args.no_guest_download:
+            vt_bootstrap(args.guest_os)
         # Install optional plugins from config file
         plugins = CONFIGFILE.get('plugins', 'optional').split(',')
         for plugin in plugins:
@@ -704,7 +707,7 @@ if __name__ == '__main__':
     if args.run_suite:
         if "guest_" in args.run_suite:
             # Make sure we download guest image once
-            if not args.no_guest_download:
+            if not args.no_guest_download and not bootstraped:
                 vt_bootstrap(args.guest_os)
             only_filter = args.only_filter
             if only_filter:
