@@ -331,7 +331,7 @@ def install_repo(path):
     :param repo: repository path
     """
     logger.info("Installing repo: %s", path)
-    cmd = "cd %s;make requirements;python setup.py install" % path
+    cmd = "cd %s;make requirements;make requirements-selftests;python setup.py install" % path
     try:
         err_str = "Failed to install %s repository:" % path.split('/')[-1]
         status, output = commands.getstatusoutput(cmd)
