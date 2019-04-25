@@ -99,6 +99,9 @@ if __name__ == '__main__':
     parser.add_argument('--create-config', dest='create_cfg',
                         action='store_true', default=False,
                         help='Create test config and input files')
+    parser.add_argument('--run-test', dest='run_test',
+                        action='store_true', default=False,
+                        help='Run the test suite using created test config and input files')
     parser.add_argument('--additional-params', dest='add_params',
                         action='store', default='',
                         help='Additional parameters(key=value) to the input file, space separated')
@@ -112,3 +115,5 @@ if __name__ == '__main__':
     if args.create_cfg:
         cmd = create_config(pci_details)
         print cmd
+    if args.run_test:
+        os.system(cmd)
