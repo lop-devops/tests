@@ -1,0 +1,25 @@
+[io_nvme_fvt]
+disk = disks:0
+disks = disks:all
+device = interfaces:0
+pci_device = functions:0
+MODULES = driver
+
+[io_fc_fvt]
+disk = mpath_disks:0
+disks = mpath_disks:all
+wwids = mpath_wwids:all
+pci_device = functions:0
+MODULES = driver
+
+[io_network_fvt]
+interface = interfaces:0
+host_interfaces = interfaces:all
+pci_device,functions:0
+MODULES = driver
+
+[io_ib_fvt]
+interface = interfaces:0
+host_interfaces = interfaces:all
+pci_device,functions:0
+MODULES = driver
