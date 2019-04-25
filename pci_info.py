@@ -43,7 +43,7 @@ def create_config(pci_list):
         shutil.copy("config/tests/host/%s.cfg" % orig_cfg, "config/tests/host/%s.cfg" % new_cfg)
 
         # adding info to input file
-        if not CONFIGFILE.has_section(orig_cfg) or not additional_params:
+        if not CONFIGFILE.has_section(orig_cfg) and not additional_params:
             continue
         input_params = CONFIGFILE.items(orig_cfg)
         if not input_params:
