@@ -25,7 +25,8 @@ def create_config(pci_list):
     """
     Creates avocado test suite / config file, and input file needed for yaml files in that config files.
     """
-    output = ""
+    test_suites = []
+    input_file_string = ""
     input_params = []
     additional_params = args.add_params.split()
     for pci in pci_list:
@@ -41,9 +42,10 @@ def create_config(pci_list):
             logger.debug("ignoring pci address %s as there is no cfg for %s", pci['pci_root'], pci['adapter_type'])
             continue
         shutil.copy("config/tests/host/%s.cfg" % orig_cfg, "config/tests/host/%s.cfg" % new_cfg)
+        test_suites.append("host_%s" % new_cfg)
 
         # adding info to input file
-        if not CONFIGFILE.has_section(orig_cfg) or not additional_params:
+        if not CONFIGFILE.has_section(orig_cfg) and not additional_params:
             continue
         input_params = CONFIGFILE.items(orig_cfg)
         if not input_params:
@@ -68,20 +70,19 @@ def create_config(pci_list):
             key = param.split('=')[0]
             value = param.split('=')[1]
             INPUTFILE.set(new_cfg, key, "\"%s\"" % value)
-        output += "host_%s," % new_cfg
-    if output:
-        output = output[:-1]
+    test_suites = ",".join(test_suites)
 
     # write to input file
     if input_params:
         with open(input_path, 'w+') as input:
             INPUTFILE.write(input)
-        output += " --input-file %s" % input_path
+        input_file_string = "--input-file %s" % input_path
 
-    # print avocado-setup command additional params
-    if output:
-        output = "--run-suite %s" % output
-        print output
+    # generate avocado-setup command line
+    if test_suites:
+        cmd = "python avocado-setup.py --run-suite %s %s" % (test_suites, input_file_string)
+        return cmd
+    return ""
         
 
 if __name__ == '__main__':
@@ -98,6 +99,9 @@ if __name__ == '__main__':
     parser.add_argument('--create-config', dest='create_cfg',
                         action='store_true', default=False,
                         help='Create test config and input files')
+    parser.add_argument('--run-test', dest='run_test',
+                        action='store_true', default=False,
+                        help='Run the test suite using created test config and input files')
     parser.add_argument('--additional-params', dest='add_params',
                         action='store', default='',
                         help='Additional parameters(key=value) to the input file, space separated')
@@ -109,4 +113,7 @@ if __name__ == '__main__':
     if args.show_info:
         pprint(pci_details)
     if args.create_cfg:
-        create_config(pci_details)
+        cmd = create_config(pci_details)
+        print cmd
+    if args.run_test:
+        os.system(cmd)
