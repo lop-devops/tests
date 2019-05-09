@@ -208,7 +208,7 @@ def get_pci_class_name(pci_address):
     """
     pci_class_dic = {'0104': 'scsi_host', '0c04': 'scsi_host', '0280': 'net',
                      '0c03': 'scsi_host', '0200': 'net', '0108': 'nvme',
-                     '0106': 'ata_port'}
+                     '0106': 'ata_port', '0207': 'net'}
     pci_class_id = get_pci_prop(pci_address, "Class")
     if pci_class_id not in pci_class_dic:
         return ""
@@ -226,8 +226,9 @@ def get_pci_type(pci_address):
 
     :return: type for corresponding PCI bus address
     """
-    pci_class_dic = {'0104': 'raid', '0c04': 'fc', '0280': 'ib',
-                     '0c03': 'usb', '0200': 'network', '0108': 'nvme'}
+    pci_class_dic = {'0104': 'raid', '0c04': 'fc', '0280': 'infiniband',
+                     '0c03': 'usb', '0200': 'network', '0108': 'nvme',
+                     '0207': 'infiniband'}
     pci_class_id = get_pci_prop(pci_address, "Class")
     if pci_class_id not in pci_class_dic:
         return ""
@@ -468,6 +469,10 @@ def pci_info(pci_addrs, blacklist=''):
         if pci_dic['class'] == 'scsi_host':
             pci_dic['mpath_wwids'] = get_multipath_wwids(pci_dic['disks'])
             pci_dic['mpath_disks'] = get_multipath_disks(pci_dic['mpath_wwids'])
+        pci_dic['infiniband_interfaces'] = []
+        if pci_dic['adapter_type'] == 'infiniband':
+            for fun in pci_dic['functions']:
+                pci_dic['infiniband_interfaces'].extend(get_interfaces_in_pci_address(fun, 'infiniband'))
         pci_dic['is_root_disk'] = False
         for disk in pci_dic['disks']:
             for root_disk in root_disks:
