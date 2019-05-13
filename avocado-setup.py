@@ -419,6 +419,7 @@ def parse_test_config(test_config_file, avocado_bin, disable_kvm):
         logger.error("Test Config %s not present", test_config_file)
     else:
         (env_ver, env_type, cmdpat) = helper.get_env_type(disable_kvm)
+        norun_tests = []
         if NORUNTESTFILE.has_section('norun_%s_%s' % (env_ver, env_type)):
             norun_tests = NORUNTESTFILE.get('norun_%s_%s' % (env_ver, env_type), 'tests').split(',')
         with open(test_config_file, 'r') as fp:
