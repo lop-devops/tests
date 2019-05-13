@@ -127,6 +127,8 @@ def get_multipath_wwids(disks_list):
             if disk == line.split()[-2] and line.split()[-1] != '-':
                 wwid_list.append(line.split()[-1])
     existing_wwids = []
+    if not os.path.isfile("/etc/multipath/wwids"):
+        return []
     with open('/etc/multipath/wwids', 'r') as wwid_file:
         for line in wwid_file:
             if '#' not in line:
