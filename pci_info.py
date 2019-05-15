@@ -2,8 +2,6 @@
 
 from pprint import pprint
 from lib import pci
-import sys
-import json
 import argparse
 import shutil
 import os
@@ -20,6 +18,7 @@ INPUTFILE = ConfigParser.ConfigParser()
 INPUTFILE.optionxform = str
 
 logger = logger_init(filepath=BASE_PATH).getlogger()
+
 
 def create_config(pci_list):
     """
@@ -83,7 +82,7 @@ def create_config(pci_list):
         cmd = "python avocado-setup.py --run-suite %s %s" % (test_suites, input_file_string)
         return cmd
     return ""
-        
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
