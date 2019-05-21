@@ -23,3 +23,7 @@ interface = interfaces:0
 host_interfaces = interfaces:all
 pci_device,functions:0
 MODULES = driver
+
+[io_raid_fvt]
+primary_ioa = primary_ioa
+secondary_ioa = secondary_ioa
