@@ -76,11 +76,12 @@ def get_dist():
             elif line.startswith("VERSION="):
                 try:
                     line = line.replace('"', '')
-                    dist_ver = re.findall("VERSION=(\S+)", line)[0]
-                    dist_ver = re.match('(\d*)(\.)*(\d+)', dist_ver).group()
+                    dist_ver = re.findall("VERSION=(\S+)", line)[0].lower().replace("-",".")
                 except:
                     pass
         fd.close()
+    if os.uname()[-1] == 'ppc64':
+        dist += 'be'
     return (dist, dist_ver)
 
 
@@ -107,12 +108,7 @@ def get_env_type(disable_kvm=False):
     """
     (dist, dist_ver) = get_dist()
     env_ver = dist
-    if os.uname()[-1] == 'ppc64':
-        env_ver += 'be'
-    if dist == "sles" and dist_ver == "15":
-        env_ver += dist_ver
-    elif dist == "rhel" and dist_ver == "8.0":
-        env_ver += dist_ver
+    env_ver += dist_ver
     env_type = get_machine_type()
     if env_type == "NV" and not disable_kvm:
         env_type = "kvm"
