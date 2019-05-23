@@ -71,7 +71,7 @@ class TestSuite():
     def jobdir(self):
         cmd = 'grep %s %s/*/id|grep job-' % (self.id, self.resultdir)
         self.job_dir = helper.runcmd(cmd)[1]
-        return self.job_dir
+        return os.path.dirname(self.job_dir)
 
     def config(self):
         if self.type == 'guest':
