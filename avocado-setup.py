@@ -18,6 +18,7 @@ import os
 import shutil
 import time
 import sys
+import json
 import argparse
 import ConfigParser
 import binascii
@@ -45,6 +46,14 @@ LOG_DIR = "%s/results" % BASE_PATH
 logger = logger_init(filepath=BASE_PATH).getlogger()
 
 
+class bcolors:
+    GREEN = '\033[92m'
+    RED = '\033[91m'
+    YELLOW = '\33[93m'
+    BLUE = '\33[94m'
+    ENDC = '\033[0m'
+
+
 class TestSuite():
     guest_add_args = ""
     host_add_args = ""
@@ -63,6 +72,7 @@ class TestSuite():
         self.run = "Not_Run"
         self.runsummary = None
         self.runlink = None
+        self.result = None
         if self.type == 'guest':
             self.vt_type = vt_type
         else:
@@ -95,10 +105,11 @@ class TestSuite():
             self.conf = local_cfg
         return self.conf
 
-    def runstatus(self, status, summary="Tests Executed", link=''):
+    def runstatus(self, status, summary="Tests Executed", link='', result=''):
         self.run = status
         self.runsummary = summary
         self.runlink = link
+        self.result = result
 
 
 def pip_install():
@@ -357,8 +368,16 @@ def run_test(testsuite, avocado_bin):
         testsuite.runstatus("Not_Run", "Command execution failed")
         return
     logger.info('')
-    result_link = "%s/job.log" % testsuite.jobdir()
-    testsuite.runstatus("Run", "Successfully executed", result_link)
+    results_json = "%s/results.json" % testsuite.jobdir()
+    with open(results_json) as json_file:
+        data = json.load(json_file)
+    result = "||  %sTOTAL %s%s" % (bcolors.BLUE, data['total'], bcolors.ENDC)
+    result += "  |  %sPASS %s%s" % (bcolors.GREEN, data['pass'], bcolors.ENDC)
+    result += "  |  %sFAIL %s%s" % (bcolors.RED, data['failures'], bcolors.ENDC)
+    result += "  |  %sCANCEL %s%s" % (bcolors.YELLOW, data['cancel'], bcolors.ENDC)
+    result += "  ||"
+    result_link = data['debuglog']
+    testsuite.runstatus("Run", "Successfully executed", result_link, result)
     return
 
 
@@ -419,7 +438,6 @@ def parse_test_config(test_config_file, avocado_bin, disable_kvm):
         logger.error("Test Config %s not present", test_config_file)
     else:
         (env_ver, env_type, cmdpat) = helper.get_env_type(disable_kvm)
-        norun_tests = []
         if NORUNTESTFILE.has_section('norun_%s_%s' % (env_ver, env_type)):
             norun_tests = NORUNTESTFILE.get('norun_%s_%s' % (env_ver, env_type), 'tests').split(',')
         with open(test_config_file, 'r') as fp:
@@ -649,6 +667,7 @@ if __name__ == '__main__':
                                                          Testsuites[test_suite].run,
                                                          Testsuites[test_suite].runsummary))
             summary_output.append(Testsuites[test_suite].runlink)
+            summary_output.append('%100s' % Testsuites[test_suite].result)
         logger.info("\n".join(summary_output))
 
     if os.path.isdir("/tmp/mux/"):
