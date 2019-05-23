@@ -128,8 +128,14 @@ def env_check(disable_kvm):
         os.makedirs("/tmp/mux/")
     not_found = []
     (env_ver, env_type, cmd_pat) = helper.get_env_type(disable_kvm)
-    # try to check base packages
+    # try to check base packages using major version numbers
+    env_ver = env_ver.split('.')[0]
     env_deps = []
+    if not CONFIGFILE.has_section('deps_%s' % env_ver):
+        # Fallback to base name if specific version is not found
+        dist = helper.get_dist()
+        env_ver = dist[0]
+
     if CONFIGFILE.has_section('deps_%s' % env_ver):
         packages = CONFIGFILE.get('deps_%s' % env_ver, 'packages')
         if packages != '':
