@@ -455,6 +455,12 @@ def parse_test_config(test_config_file, avocado_bin, disable_kvm):
                 test_dic['mux'] = line[1]
                 mux_flag = 1
                 test_dic['name'] = "%s_%s" % (test_dic['name'], test_dic['mux'].split("/")[-1].split(".")[0])
+                count = 0
+                for list_dic in test_list:
+                    if test_dic['name'] == list_dic['name'].split('.')[0]:
+                        count += 1
+                if count:
+                    test_dic['name'] += ".%d" % (count + 1)
                 if args.inputfile:
                     mux_file = os.path.join(TEST_DIR, test_dic['mux'])
                     if not os.path.isfile(mux_file):
