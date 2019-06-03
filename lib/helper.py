@@ -115,7 +115,7 @@ def get_env_type(disable_kvm=False):
     if 'ubuntu' in dist:
         cmd_pat = "dpkg -l|grep  ' %s'"
     else:
-        cmd_pat = "rpm -qa|grep %s"
+        cmd_pat = "rpm -q %s"
     return (env_ver, env_type, cmd_pat)
 
 
