@@ -224,7 +224,7 @@ def get_repo(repo, basepath, install=False):
     repo_name = repo.split('/')[-1].split('.')[0]
     repo_path = os.path.join(basepath, repo_name)
     if os.path.isdir(repo_path):
-        cmd = "cd %s;git remote update;git merge origin master" % repo_path
+        cmd = "cd %s;git pull --no-edit" % repo_path
         helper.runcmd(cmd,
                       info_str="Updating the repo: %s in %s" % (repo_name, repo_path),
                       err_str="Failed to update %s repository:" % repo_name)
