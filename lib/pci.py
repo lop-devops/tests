@@ -428,6 +428,69 @@ def get_driver(pci_address):
     return ""
 
 
+def ioa_details():
+    """
+    Gets the IPR IOA details and returns
+
+    return: list of dics, with keys ioa, serial, remote serial, pci, status
+    """
+    cmd = "iprconfig -c show-ioas"
+    show_ioas = commands.getoutput(cmd)
+    ioas = []
+    if show_ioas:
+        for line in show_ioas.splitlines():
+            if 'Operational' in line:
+                ioa = line.split()[0]
+                serial = r_serial = pci = status = ''
+                cmd = 'iprconfig -c show-details %s' % ioa
+                ioa_details = commands.getoutput(cmd)
+                for line in ioa_details.splitlines():
+                    if line.startswith('PCI Address'):
+                        pci = line.split()[-1]
+                    if line.startswith('Serial Number'):
+                        serial = line.split()[-1]
+                    if line.startswith('Remote Adapter Serial Number'):
+                        r_serial = line.split()[-1]
+                    if line.startswith('Current Dual Adapter State'):
+                        status = line.split()[-1]
+                ioas.append({'ioa': ioa, 'pci': pci, 'serial': serial, 'r_serial': r_serial, 'status': status})
+    return ioas
+
+
+def get_primary_ioa(pci_address):
+    """
+    Gets the Primary IPR IOA in the given PCI address
+
+    :param pci_address: PCI Address (0000:00:1f, 0000:00:1f.1, ...)
+
+    :return: primary IOA
+    """
+    for ioa_detail in ioa_details():
+        if pci_address in ioa_detail['pci'] and 'Primary' in ioa_detail['status']:
+            return ioa_detail['ioa']
+    return ''
+
+def get_secondary_ioa(primary_ioa):
+    """
+    Gets the Secondary IPR IOA in the given Primary IPR IOA
+
+    :param primary_ioa: Primary IPR IOA (sg1, sg22, ...)
+
+    :return: secondary IOA
+    """
+    details = ioa_details()
+    serial = ''
+    for ioa_detail in details:
+        if primary_ioa == ioa_detail['ioa']:
+            serial = ioa_detail['r_serial']
+    if not serial:
+        return ''
+    for ioa_detail in details:
+        if serial == ioa_detail['serial']:
+            return ioa_detail['ioa']
+    return ''
+
+
 def pci_info(pci_addrs, blacklist=''):
     """
     Get all the information for given PCI addresses (comma separated).
@@ -475,6 +538,10 @@ def pci_info(pci_addrs, blacklist=''):
         if pci_dic['adapter_type'] == 'infiniband':
             for fun in pci_dic['functions']:
                 pci_dic['infiniband_interfaces'].extend(get_interfaces_in_pci_address(fun, 'infiniband'))
+        if pci_dic['adapter_type'] == 'raid':
+            for fun in pci_dic['functions']:
+                pci_dic['primary_ioa'] = get_primary_ioa(fun)
+                pci_dic['secondary_ioa'] = get_secondary_ioa(pci_dic['primary_ioa'])
         pci_dic['is_root_disk'] = False
         for disk in pci_dic['disks']:
             for root_disk in root_disks:
