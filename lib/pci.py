@@ -86,11 +86,8 @@ def get_disks_in_pci_address(pci_address):
     """
     disks_path = "/dev/disk/by-path/"
     disk_list = []
-    print "hi"
     for dev in os.listdir(disks_path):
-        print dev
         if pci_address in dev:
-            print dev
             link = os.readlink(os.path.join(disks_path, dev))
             disk_list.append(os.path.abspath(os.path.join(disks_path, link)))
     return disk_list
@@ -470,6 +467,7 @@ def get_primary_ioa(pci_address):
             return ioa_detail['ioa']
     return ''
 
+
 def get_secondary_ioa(primary_ioa):
     """
     Gets the Secondary IPR IOA in the given Primary IPR IOA
@@ -499,6 +497,8 @@ def pci_info(pci_addrs, blacklist=''):
 
     :return: list of dictionaries of PCI information
     """
+    if not pci_addrs:
+        return []
     pci_addrs = pci_addrs.split(',')
 
     pci_addrs = [pci_addr.split('.')[0] for pci_addr in pci_addrs]

@@ -5,11 +5,12 @@ from lib import pci
 import argparse
 import shutil
 import os
+import sys
 import ConfigParser
 from lib.logger import logger_init
 
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
-CONFIG_PATH = "%s/config/wrapper/pci_input_cfg.txt" % BASE_PATH
+CONFIG_PATH = "%s/config/wrapper/pci_input.conf" % BASE_PATH
 CONFIGFILE = ConfigParser.SafeConfigParser()
 CONFIGFILE.optionxform = str
 CONFIGFILE.read(CONFIG_PATH)
@@ -109,10 +110,13 @@ if __name__ == '__main__':
         pci_details = pci.pci_info(args.pci_addr, blacklist=args.pci_addr_blacklist)
     else:
         pci_details = pci.all_pci_info(blacklist=args.pci_addr_blacklist)
+    if not pci_details:
+        logger.info("No PCI Found")
+        sys.exit(0)
     if args.show_info:
         pprint(pci_details)
     if args.create_cfg:
         cmd = create_config(pci_details)
-        print cmd
+        logger.info(cmd)
     if args.run_test:
         os.system(cmd)

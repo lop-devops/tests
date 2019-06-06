@@ -76,7 +76,7 @@ def get_dist():
             elif line.startswith("VERSION="):
                 try:
                     line = line.replace('"', '')
-                    dist_ver = re.findall("VERSION=(\S+)", line)[0].lower().replace("-",".")
+                    dist_ver = re.findall("VERSION=(\S+)", line)[0].lower().replace("-", ".")
                 except:
                     pass
         fd.close()

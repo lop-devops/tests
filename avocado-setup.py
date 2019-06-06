@@ -427,7 +427,7 @@ def parse_test_config(test_config_file, avocado_bin, disable_kvm):
         (env_ver, env_type, cmdpat) = helper.get_env_type(disable_kvm)
         norun_tests = []
         # Get common set of not needed tests
-        dist = 'norun_%s'  % helper.get_dist()[0]
+        dist = 'norun_%s' % helper.get_dist()[0]
         major = 'norun_%s' % env_ver.split('.')[0]
         minor = 'norun_%s_%s' % (env_ver, env_type)
         for section in [dist, major, minor]:
