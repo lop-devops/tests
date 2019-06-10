@@ -51,6 +51,8 @@ def create_config(pci_list):
         if not input_params:
             continue
         INPUTFILE.add_section(new_cfg)
+
+        # input params
         for param in input_params:
             try:
                 key = param[0]
@@ -66,10 +68,20 @@ def create_config(pci_list):
                 INPUTFILE.set(new_cfg, key, "\"%s\"" % value)
             except:
                 pass
+
+        # additional params
         for param in additional_params:
             key = param.split('=')[0]
+            # handling additional params per pci
+            if '::' in key:
+                pci_root = key.split('::')[0].split('.')[0]
+                if pci_root != pci['pci_root']:
+                    continue
+                key = key.split('::')[1]
+
             value = param.split('=')[1]
             INPUTFILE.set(new_cfg, key, "\"%s\"" % value)
+
     test_suites = ",".join(test_suites)
 
     # write to input file
