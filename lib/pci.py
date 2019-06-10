@@ -86,11 +86,8 @@ def get_disks_in_pci_address(pci_address):
     """
     disks_path = "/dev/disk/by-path/"
     disk_list = []
-    print "hi"
     for dev in os.listdir(disks_path):
-        print dev
         if pci_address in dev:
-            print dev
             link = os.readlink(os.path.join(disks_path, dev))
             disk_list.append(os.path.abspath(os.path.join(disks_path, link)))
     return disk_list
@@ -470,6 +467,7 @@ def get_primary_ioa(pci_address):
             return ioa_detail['ioa']
     return ''
 
+
 def get_secondary_ioa(primary_ioa):
     """
     Gets the Secondary IPR IOA in the given Primary IPR IOA
@@ -491,7 +489,7 @@ def get_secondary_ioa(primary_ioa):
     return ''
 
 
-def pci_info(pci_addrs, blacklist=''):
+def pci_info(pci_addrs, type='', pci_blacklist='', type_blacklist=''):
     """
     Get all the information for given PCI addresses (comma separated).
 
@@ -499,16 +497,25 @@ def pci_info(pci_addrs, blacklist=''):
 
     :return: list of dictionaries of PCI information
     """
+    if not pci_addrs:
+        return []
     pci_addrs = pci_addrs.split(',')
 
     pci_addrs = [pci_addr.split('.')[0] for pci_addr in pci_addrs]
     pci_addrs = list(set(pci_addrs))
-    if blacklist:
-        blacklist = blacklist.split(',')
-        blacklist = [pci_addr.split('.')[0] for pci_addr in blacklist]
-        pci_addrs = [pci_addr for pci_addr in pci_addrs if pci_addr not in blacklist]
+    if pci_blacklist:
+        pci_blacklist = pci_blacklist.split(',')
+        pci_blacklist = [pci_addr.split('.')[0] for pci_addr in pci_blacklist]
+        pci_addrs = list(set(pci_addrs) - set(pci_blacklist))
     pci_addrs.sort()
     pci_list = []
+    if type:
+        type = list(set(type.split(',')))
+    else:
+        type = []
+    if type_blacklist:
+        type_blacklist = type_blacklist.split(',')
+        type = list(set(type) - set(type_blacklist))
 
     for pci_addr in pci_addrs:
         pci_dic = {}
@@ -518,6 +525,8 @@ def pci_info(pci_addrs, blacklist=''):
         pci_dic['adapter_description'] = get_pci_name(pci_dic['functions'][0])
         pci_dic['adapter_id'] = get_pci_id(pci_dic['functions'][0])
         pci_dic['adapter_type'] = get_pci_type(pci_dic['functions'][0])
+        if pci_dic['adapter_type'] not in type:
+            continue
         pci_dic['driver'] = get_driver(pci_dic['functions'][0])
         pci_dic['slot'] = get_slot_from_sysfs(pci_dic['functions'][0])
         pci_dic['interfaces'] = []
@@ -552,11 +561,10 @@ def pci_info(pci_addrs, blacklist=''):
     return pci_list
 
 
-def all_pci_info(blacklist=''):
+def all_pci_info(type='', pci_blacklist='', type_blacklist=''):
     """
     Get all the information for all PCI addresses in the system.
-
     :return: list of dictionaries of PCI information
     """
     pci_addrs = get_pci_addresses()
-    return pci_info(",".join(pci_addrs), blacklist=blacklist)
+    return pci_info(",".join(pci_addrs), type=type, pci_blacklist=pci_blacklist, type_blacklist=type_blacklist)

@@ -33,6 +33,17 @@ ARGUMENT DETAILS:
     Use comma separated values to provide multiple pci addresses.
 
 
+    --type TYPE
+    Use this option to specify for what type of adapters the details should be collected.
+    Use comma separated values to provide multiple types.
+    If not provided, collects details for all types of adapters in the system.
+
+
+    --type-blacklist TYPE_BLACKLIST
+    Use this option to leave out adapter types from the list.
+    Use comma separated values to provide multiple adapter types.
+
+
     --show-info
     Option to display collected details to the user or not.
     The output is a python dictionary.
@@ -68,7 +79,14 @@ ARGUMENT DETAILS:
     --additional-params ADD_PARAMS
     If the collected information is not enough for some tests, this provision can be used
     to provide additional static arguments. They are key=value pairs, separated by space.
-    Note: At this time, these additional params are for all test configs.
+
+    Additional params per pci address is supported, if they are provided before the key=value
+    pair, separated by ::.
+    If no pci address is specified, these additional params are for all test configs.
+
+    Example:
+        --additional-params "0005:60:00::a=b c=d"
+        a = b is only for the specified pci address, and c = d is for all test configs.
 
 
 
