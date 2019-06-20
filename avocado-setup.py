@@ -461,12 +461,6 @@ def parse_test_config(test_config_file, avocado_bin, disable_kvm):
                 test_dic['mux'] = line[1]
                 mux_flag = 1
                 test_dic['name'] = "%s_%s" % (test_dic['name'], test_dic['mux'].split("/")[-1].split(".")[0])
-                count = 0
-                for list_dic in test_list:
-                    if test_dic['name'] == list_dic['name'].split('.')[0]:
-                        count += 1
-                if count:
-                    test_dic['name'] += ".%d" % (count + 1)
                 if args.inputfile:
                     mux_file = os.path.join(TEST_DIR, test_dic['mux'])
                     if not os.path.isfile(mux_file):
@@ -475,6 +469,12 @@ def parse_test_config(test_config_file, avocado_bin, disable_kvm):
                     tmp_mux_path = os.path.join('/tmp/mux/', "%s_%s.yaml" % (test_config_name, test_dic['name']))
                     edit_mux_file(test_config_name, mux_file, tmp_mux_path)
                     test_dic['mux'] = tmp_mux_path
+            count = 0
+            for list_dic in test_list:
+                if test_dic['name'] == list_dic['name'].split('.')[0]:
+                    count += 1
+            if count:
+                test_dic['name'] += ".%d" % (count + 1)
             if len(line) > 2:
                 test_dic['args'] = " --execution-order %s " % line[2]
             test_list.append(test_dic)
