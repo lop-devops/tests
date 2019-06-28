@@ -313,7 +313,6 @@ def bootstrap(disable_kvm=False):
     :params disable_kvm: Flag to disable kvm environment bootstrap
     """
     env_clean()
-    pip_install()
     logger.info("Bootstrapping Avocado")
     get_repo(AVOCADO_REPO, BASE_PATH, True)
     if not disable_kvm:
