@@ -125,3 +125,32 @@ def get_avocado_bin(ignore_status=False):
     """
     return runcmd('which avocado', ignore_status=ignore_status,
                   err_str="avocado command not installed or not found in path")[1]
+
+
+def get_install_cmd():
+    """
+    Get the command to install, based on the distro
+    """
+    (dist, dist_ver) = get_dist()
+    if 'ubuntu' in dist:
+        cmd = "echo y | apt-get install"
+    elif 'sles' in dist:
+        cmd = "zypper install -y"
+    else:
+        cmd = "yum -y install"
+    return cmd
+
+
+def install_packages(package_list):
+    """
+    Install packages, given list of packages
+    """
+    install_cmd = get_install_cmd()
+    not_installed = False
+    for pkg in package_list:
+        (status, output) = runcmd("%s %s" % (install_cmd, pkg), ignore_status=True)
+        if status != 0:
+            logger.error("%s not installed" % pkg)
+            logger.debug(output)
+        not_installed = True
+    return not_installed
