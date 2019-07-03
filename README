@@ -88,6 +88,7 @@
       --no-deps-check             Force wrapper to skip check for dependancy packages
       --install-deps              To force wrapper to install dependancy packages (Only for Ubuntu, SLES and yum based OS)
       --clean                     Remove/Uninstall autotest and avocado from system after test completion
+      --enable-kvm                To enable bootstrap kvm tests
 
 
     ARGUMENT DETAILS:

@@ -102,7 +102,7 @@ def get_machine_type():
     return machine_type
 
 
-def get_env_type(disable_kvm=False):
+def get_env_type(enable_kvm=False):
     """
     Return what environment the system is: Distro, Version, Type
     """
@@ -110,7 +110,7 @@ def get_env_type(disable_kvm=False):
     env_ver = dist
     env_ver += dist_ver
     env_type = get_machine_type()
-    if env_type == "NV" and not disable_kvm:
+    if env_type == "NV" and enable_kvm:
         env_type = "kvm"
     if 'ubuntu' in dist:
         cmd_pat = "dpkg -l|grep  ' %s'"

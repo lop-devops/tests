@@ -117,7 +117,7 @@ def pip_install():
                           debug_str='Installing python package %s using pip' % dep)
 
 
-def env_check(disable_kvm):
+def env_check(enable_kvm):
     """
     Check if the environment is proper
     """
@@ -127,7 +127,7 @@ def env_check(disable_kvm):
         logger.info("Creating temporary mux dir")
         os.makedirs("/tmp/mux/")
     not_found = []
-    (env_ver, env_type, cmd_pat) = helper.get_env_type(disable_kvm)
+    (env_ver, env_type, cmd_pat) = helper.get_env_type(enable_kvm)
     # try to check base packages using major version numbers
     env_ver = env_ver.split('.')[0]
     env_deps = []
@@ -182,7 +182,7 @@ def is_avocado_plugin_avl(plugin):
         return True
 
 
-def need_bootstrap(disable_kvm=False):
+def need_bootstrap(enable_kvm=False):
     """
     Check if bootstrap required
     :return: True if bootstrap is needed
@@ -193,7 +193,7 @@ def need_bootstrap(disable_kvm=False):
     if 'no avocado ' in helper.get_avocado_bin(ignore_status=True):
         logger.debug("Avocado needs to be installed")
         needsBootstrap = True
-    if not disable_kvm:
+    if enable_kvm:
         # Check for avocado-vt
         for plugin in ['vt', 'vt-list', 'vt-bootstrap']:
             if not is_avocado_plugin_avl(plugin):
@@ -311,16 +311,16 @@ def kvm_bootstrap():
                   info_str="Bootstrapping vt qemu")
 
 
-def bootstrap(disable_kvm=False):
+def bootstrap(enable_kvm=False):
     """
     Prepare the environment for execution
 
-    :params disable_kvm: Flag to disable kvm environment bootstrap
+    :params enable_kvm: Flag to enable kvm environment bootstrap
     """
     env_clean()
     logger.info("Bootstrapping Avocado")
     get_repo(AVOCADO_REPO, BASE_PATH, True)
-    if not disable_kvm:
+    if enable_kvm:
         kvm_bootstrap()
     helper.runcmd('mkdir -p %s' % TEST_DIR,
                   debug_str="Creating test repo dir %s" % TEST_DIR,
@@ -416,7 +416,7 @@ def edit_mux_file(test_config_name, mux_file_path, tmp_mux_path):
         mux_fp.write(str("\n".join(mux_str_edited)))
 
 
-def parse_test_config(test_config_file, avocado_bin, disable_kvm):
+def parse_test_config(test_config_file, avocado_bin, enable_kvm):
     """
     Parses Test Config file and returns list of indivual tests dictionaries,
     with test path and yaml file path.
@@ -428,7 +428,7 @@ def parse_test_config(test_config_file, avocado_bin, disable_kvm):
     if not os.path.isfile(test_config_file):
         logger.error("Test Config %s not present", test_config_file)
     else:
-        (env_ver, env_type, cmdpat) = helper.get_env_type(disable_kvm)
+        (env_ver, env_type, cmdpat) = helper.get_env_type(enable_kvm)
         norun_tests = []
         # Get common set of not needed tests
         dist = 'norun_%s' % helper.get_dist()[0]
@@ -546,12 +546,12 @@ if __name__ == '__main__':
     parser.add_argument('--clean', dest="clean",
                         action='store_true', default=False,
                         help='To remove/uninstall autotest, avocado from system')
-    parser.add_argument('--disable-kvm', dest="disable_kvm", action='store_true',
-                        default=False, help='disable bootstrap kvm tests')
+    parser.add_argument('--enable-kvm', dest="enable_kvm", action='store_true',
+                        default=False, help='enable bootstrap kvm tests')
 
     args = parser.parse_args()
     if helper.get_machine_type() == 'pHyp':
-        args.disable_kvm = True
+        args.enable_kvm = False
         if args.run_suite:
             if "guest_" in args.run_suite:
                 logger.error("Not suitable platform to run kvm tests, "
@@ -559,11 +559,11 @@ if __name__ == '__main__':
                 sys.exit(-1)
     else:
         if args.run_suite:
-            if args.disable_kvm and "guest_" in args.run_suite:
+            if "guest_" in args.run_suite:
                 logger.warning("Overriding user setting and enabling kvm bootstrap "
                                "as guest tests are requested")
-                args.disable_kvm = False
-    env_check(args.disable_kvm)
+                args.enable_kvm = True
+    env_check(args.enable_kvm)
     additional_args = args.add_args
     if args.verbose:
         additional_args += ' --show-job-log'
@@ -577,11 +577,11 @@ if __name__ == '__main__':
 
     additional_args += ' --job-results-dir %s' % outputdir
     bootstraped = False
-    if (args.bootstrap or need_bootstrap(args.disable_kvm)):
+    if (args.bootstrap or need_bootstrap(args.enable_kvm)):
         create_config(outputdir)
-        bootstrap(args.disable_kvm)
+        bootstrap(args.enable_kvm)
         bootstraped = True
-        if args.guest_os and not args.no_guest_download and not args.disable_kvm:
+        if args.guest_os and not args.no_guest_download and args.enable_kvm:
             guest_download(args.guest_os)
         # Install optional plugins from config file
         plugins = CONFIGFILE.get('plugins', 'optional').split(',')
@@ -620,7 +620,6 @@ if __name__ == '__main__':
                                             "%s"' % args.no_filter
             if additional_args:
                 TestSuite.guest_add_args += additional_args
-        if "host_" in args.run_suite:
             TestSuite.host_add_args = additional_args
         test_suites = args.run_suite.split(',')
         if args.install_guest:
@@ -632,7 +631,7 @@ if __name__ == '__main__':
         Testsuites_list = []
         for test_suite in test_suites:
             if 'host' in test_suite:
-                test_list = parse_test_config(test_suite, avocado_bin, args.disable_kvm)
+                test_list = parse_test_config(test_suite, avocado_bin, args.enable_kvm)
                 if test_list is None:
                     Testsuites[test_suite] = TestSuite(test_suite, outputdir,
                                                        args.vt_type)
