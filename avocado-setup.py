@@ -159,6 +159,11 @@ def env_check(disable_kvm):
                 "No dependancy check flag is set, proceeding with bootstrap")
             logger.info("Please install following "
                         "dependancy packages %s", " ".join(not_found))
+        elif args.install_deps:
+            logger.warning("Installing missing packages %s", " ".join(not_found))
+            if helper.install_packages(not_found):
+                logger.error("Some packages not installed")
+                sys.exit(1)
         else:
             logger.error("Please install following "
                          "dependancy packages %s", " ".join(not_found))
@@ -535,6 +540,9 @@ if __name__ == '__main__':
     parser.add_argument('--no-deps-check', dest="no_deps_check",
                         action='store_true', default=False,
                         help='To force wrapper not to check for dependancy packages')
+    parser.add_argument('--install-deps', dest="install_deps",
+                        action='store_true', default=False,
+                        help="To force wrapper to install dependancy packages (Only for Ubuntu, SLES and yum based OS)")
     parser.add_argument('--clean', dest="clean",
                         action='store_true', default=False,
                         help='To remove/uninstall autotest, avocado from system')
