@@ -69,8 +69,11 @@ class TestSuite():
             self.vt_type = None
 
     def jobdir(self):
-        cmd = 'grep %s %s/*/id|grep job-|cut -d":" -f1' % (self.id, self.resultdir)
-        self.job_dir = helper.runcmd(cmd)[1]
+        cmd = 'grep %s %s/*/id|grep job-' % (self.id, self.resultdir)
+        status, self.job_dir = helper.runcmd(cmd, ignore_status=True)
+        if status != 0:
+            return ''
+        self.job_dir = self.job_dir.split(':')[0]
         return os.path.dirname(self.job_dir)
 
     def config(self):
@@ -367,8 +370,12 @@ def run_test(testsuite, avocado_bin):
         testsuite.runstatus("Not_Run", "Command execution failed")
         return
     logger.info('')
-    result_link = "%s/job.log" % testsuite.jobdir()
-    testsuite.runstatus("Run", "Successfully executed", result_link)
+    result_link = testsuite.jobdir()
+    if result_link:
+        result_link += "/job.log"
+        testsuite.runstatus("Run", "Successfully executed", result_link)
+    else:
+        testsuite.runstatus("Not_Run", "Unable to find job log file")
     return
 
 
