@@ -628,6 +628,7 @@ if __name__ == '__main__':
                                             "%s"' % args.no_filter
             if additional_args:
                 TestSuite.guest_add_args += additional_args
+        if "host_" in args.run_suite:
             TestSuite.host_add_args = additional_args
         test_suites = args.run_suite.split(',')
         if args.install_guest:
