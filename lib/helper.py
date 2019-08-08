@@ -14,12 +14,12 @@
 # Helper methods
 # Author: Satheesh Rajendran<sathnaga@linux.vnet.ibm.com>
 
-import commands
+import subprocess
 import os
 import re
 import sys
 
-from logger import logger_init
+from .logger import logger_init
 
 LOG_PATH = os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir)))
 
@@ -45,13 +45,13 @@ def runcmd(cmd, ignore_status=False, err_str="", info_str="", debug_str=""):
         logger.debug(debug_str)
     try:
         logger.debug("Running %s", cmd)
-        status, output = commands.getstatusoutput(cmd)
+        status, output = subprocess.getstatusoutput(cmd)
         if status != 0 and not ignore_status:
             if err_str:
                 logger.error("%s %s", err_str, output)
             sys.exit(1)
         logger.debug(output)
-    except Exception, error:
+    except Exception as error:
         if err_str:
             logger.error("%s %s ", err_str, error)
         sys.exit(1)
