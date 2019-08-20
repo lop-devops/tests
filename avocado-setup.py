@@ -19,7 +19,7 @@ import shutil
 import time
 import sys
 import argparse
-import ConfigParser
+import configparser
 import binascii
 from shutil import copyfile
 from lib.logger import logger_init
@@ -29,11 +29,11 @@ BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = "%s/config/wrapper/env.conf" % BASE_PATH
 NORUNTEST_PATH = "%s/config/wrapper/no_run_tests.conf" % BASE_PATH
 TEST_CONF_PATH = "%s/config/tests/" % BASE_PATH
-CONFIGFILE = ConfigParser.SafeConfigParser()
+CONFIGFILE = configparser.SafeConfigParser()
 CONFIGFILE.read(CONFIG_PATH)
-NORUNTESTFILE = ConfigParser.SafeConfigParser()
+NORUNTESTFILE = configparser.SafeConfigParser()
 NORUNTESTFILE.read(NORUNTEST_PATH)
-INPUTFILE = ConfigParser.SafeConfigParser()
+INPUTFILE = configparser.SafeConfigParser()
 INPUTFILE.optionxform = str
 AVOCADO_REPO = CONFIGFILE.get('repo', 'avocado')
 AVOCADO_VT_REPO = CONFIGFILE.get('repo', 'avocado_vt')
@@ -50,7 +50,7 @@ class TestSuite():
     host_add_args = ""
 
     def __init__(self, name, resultdir, vt_type, test=None, mux=None, args=None):
-        self.id = binascii.b2a_hex(os.urandom(20))
+        self.id = binascii.b2a_hex(os.urandom(20)).decode()
         self.name = str(name)
         self.shortname = "_".join(self.name.split('_')[1:])
         self.job_dir = None
@@ -265,7 +265,7 @@ def create_config(logdir):
     :param logdir: Log directory
     """
     logger.info("Creating Avocado Config")
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     os.system("mkdir -p ~/.config/avocado")
     avocado_conf = '%s/.config/avocado/avocado.conf' % os.environ['HOME']
     config.add_section('datadir.paths')
@@ -275,9 +275,9 @@ def create_config(logdir):
     config.set('datadir.paths', 'logs_dir', logdir)
 
     config.add_section('sysinfo.collect')
-    config.set('sysinfo.collect', 'enabled', True)
-    config.set('sysinfo.collect', 'profiler', True)
-    config.set('sysinfo.collect', 'per_test', True)
+    config.set('sysinfo.collect', 'enabled', 'True')
+    config.set('sysinfo.collect', 'profiler', 'True')
+    config.set('sysinfo.collect', 'per_test', 'True')
 
     with open(avocado_conf, 'w+') as conf:
         config.write(conf)
@@ -361,7 +361,7 @@ def run_test(testsuite, avocado_bin):
         if status >= 2:
             testsuite.runstatus("Not_Run", "Command execution failed")
             return
-    except Exception, error:
+    except Exception as error:
         logger.error("Running testsuite %s failed with error\n%s",
                      testsuite.name, error)
         testsuite.runstatus("Not_Run", "Command execution failed")
@@ -640,7 +640,7 @@ if __name__ == '__main__':
                     continue
                 for test in test_list:
                     for l_key in ['mux', 'args']:
-                        if not test.has_key(l_key):
+                        if l_key not in test:
                             test[l_key] = ''
                     test_suite_name = "%s_%s" % (test_suite, test['name'])
                     Testsuites[test_suite_name] = TestSuite(test_suite_name,
