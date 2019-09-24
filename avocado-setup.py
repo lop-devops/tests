@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # Copyright (C) IBM Corp. 2016.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -22,6 +23,7 @@ import argparse
 import configparser
 import binascii
 from shutil import copyfile
+
 from lib.logger import logger_init
 from lib import helper
 
@@ -404,7 +406,7 @@ def edit_mux_file(test_config_name, mux_file_path, tmp_mux_path):
     for line in mux_str.splitlines():
         if len(line) == 0 or line.lstrip()[0] == '#':
             continue
-        for key, value in input_dic.iteritems():
+        for key, value in input_dic.items():
             temp_line = line.split(":")
             mux_key = temp_line[0]
             mux_value = temp_line[1]
