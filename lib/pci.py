@@ -19,8 +19,9 @@ Module for all PCI devices related functions.
 
 import re
 import os
-import commands
 import platform
+
+from .helper import runcmd
 
 
 def get_domains():
@@ -30,8 +31,7 @@ def get_domains():
 
     :return: List of PCI domains.
     """
-    cmd = "lspci -D"
-    output = commands.getoutput(cmd)
+    output = runcmd("lspci -D")[1]
     if output:
         domains = []
         for line in output.splitlines():
@@ -48,8 +48,7 @@ def get_pci_addresses():
     :return: list of full PCI addresses including domain (0000:00:14.0)
     """
     addresses = []
-    cmd = "lspci -D"
-    for line in commands.getoutput(cmd).splitlines():
+    for line in runcmd("lspci -D")[1].splitlines():
         if not get_pci_prop(line.split()[0], 'Class').startswith('06'):
             addresses.append(line.split()[0])
     return addresses
@@ -66,8 +65,7 @@ def get_num_interfaces_in_pci(dom_pci_address):
     :return: number of devices in a PCI domain.
     """
     count = 0
-    cmd = "ls -l /sys/class/*/ -1"
-    output = commands.getoutput(cmd)
+    output = runcmd("ls -l /sys/class/*/ -1")[1]
     if output:
         filt = '/%s' % dom_pci_address
         for line in output.splitlines():
@@ -119,7 +117,7 @@ def get_multipath_wwids(disks_list):
     :return: list of mpath wwids
     """
     wwid_list = []
-    for line in commands.getoutput('lsscsi -i').splitlines():
+    for line in runcmd('lsscsi -i')[1].splitlines():
         for disk in disks_list:
             if disk == line.split()[-2] and line.split()[-1] != '-':
                 wwid_list.append(line.split()[-1])
@@ -143,7 +141,7 @@ def get_multipath_disks(wwids_list):
     """
     mpath_list = []
     for wwid in wwids_list:
-        disk = commands.getoutput("multipath -l %s" % wwid).split()[0]
+        disk = runcmd("multipath -l %s" % wwid)[1].split()[0]
         mpath_list.append("/dev/mapper/%s" % disk)
     return mpath_list
 
@@ -155,8 +153,8 @@ def get_root_disks():
     :return: list of root disk.
     """
     root_disk = []
-    root_part = commands.getoutput('df -h /').splitlines()[-1].split()[0]
-    for line in commands.getoutput('lsblk -sl %s' % root_part).splitlines():
+    root_part = runcmd('df -h /')[1].splitlines()[-1].split()[0]
+    for line in runcmd('lsblk -sl %s' % root_part)[1].splitlines():
         if 'disk' in line:
             root_disk.append('/dev/%s' % line.split()[0])
     return root_disk
@@ -249,7 +247,7 @@ def get_firmware(pci_address):
         return firmware
     interface = interface[0]
     if class_name == 'net':
-        for line in commands.getoutput('ethtool -i %s' % interface).splitlines():
+        for line in runcmd('ethtool -i %s' % interface)[1].splitlines():
             if 'firmware-version' in line:
                 firmware = line.split()[1]
                 break
@@ -344,8 +342,7 @@ def get_pci_prop(pci_address, prop):
 
     :return: specific PCI ID of a PCI address.
     """
-    cmd = "lspci -Dnvmm -s %s" % pci_address
-    output = commands.getoutput(cmd)
+    output = runcmd("lspci -Dnvmm -s %s" % pci_address)[1]
     if output:
         for line in output.splitlines():
             if prop == line.split(':')[0]:
@@ -380,8 +377,7 @@ def get_pci_prop_name(pci_address, prop):
 
     :return: specific PCI ID of a PCI address.
     """
-    cmd = "lspci -Dvmm -s %s" % pci_address
-    output = commands.getoutput(cmd)
+    output = runcmd("lspci -Dvmm -s %s" % pci_address)[1]
     if output:
         for line in output.splitlines():
             if prop == line.split(':')[0]:
@@ -416,8 +412,7 @@ def get_driver(pci_address):
 
     :return: driver of a PCI address.
     """
-    cmd = "lspci -ks %s" % pci_address
-    output = commands.getoutput(cmd)
+    output = runcmd("lspci -ks %s" % pci_address)[1]
     if output:
         for line in output.splitlines():
             if 'Kernel driver in use:' in line:
@@ -431,16 +426,14 @@ def ioa_details():
 
     return: list of dics, with keys ioa, serial, remote serial, pci, status
     """
-    cmd = "iprconfig -c show-ioas"
-    show_ioas = commands.getoutput(cmd)
+    show_ioas = runcmd("iprconfig -c show-ioas")[1]
     ioas = []
     if show_ioas:
         for line in show_ioas.splitlines():
             if 'Operational' in line:
                 ioa = line.split()[0]
                 serial = r_serial = pci = status = ''
-                cmd = 'iprconfig -c show-details %s' % ioa
-                ioa_details = commands.getoutput(cmd)
+                ioa_details = runcmd('iprconfig -c show-details %s' % ioa)[1]
                 for line in ioa_details.splitlines():
                     if line.startswith('PCI Address'):
                         pci = line.split()[-1]
