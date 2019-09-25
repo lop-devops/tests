@@ -1,21 +1,21 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from pprint import pprint
-from lib import pci
+from .lib import pci
 import argparse
 import shutil
 import os
 import sys
-import ConfigParser
-from lib.logger import logger_init
+import configparser
+from .lib.logger import logger_init
 
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = "%s/config/wrapper/pci_input.conf" % BASE_PATH
-CONFIGFILE = ConfigParser.SafeConfigParser()
+CONFIGFILE = configparser.SafeConfigParser()
 CONFIGFILE.optionxform = str
 CONFIGFILE.read(CONFIG_PATH)
 input_path = "io_input.txt"
-INPUTFILE = ConfigParser.ConfigParser()
+INPUTFILE = configparser.ConfigParser()
 INPUTFILE.optionxform = str
 
 logger = logger_init(filepath=BASE_PATH).getlogger()
