@@ -231,6 +231,8 @@ def get_repo(repo, basepath, install=False):
     """
     repo_name = repo.split('/')[-1].split('.')[0]
     repo_path = os.path.join(basepath, repo_name)
+    if os.path.isdir(repo_path) and ('-b ' or '--branch ' in repo):
+        shutil.rmtree(repo_path)
     if os.path.isdir(repo_path):
         cmd = "cd %s;git pull --no-edit" % repo_path
         helper.runcmd(cmd,
