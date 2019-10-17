@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 
 from pprint import pprint
-from .lib import pci
+from lib import pci
 import argparse
 import shutil
 import os
 import sys
 import configparser
-from .lib.logger import logger_init
+from lib.logger import logger_init
 
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = "%s/config/wrapper/pci_input.conf" % BASE_PATH
@@ -105,8 +105,8 @@ if __name__ == '__main__':
     parser.add_argument('--pci-address-blacklist', dest='pci_addr_blacklist',
                         action='store', default='',
                         help='pci address which need not be considered, comma separated')
-    parser.add_argument('--type', dest='type',
-                        action='store', default='',
+    parser.add_argument('--type', dest='pci_type',
+                        action='store', default='All',
                         help='type of adapters, comma separated')
     parser.add_argument('--type-blacklist', dest='type_blacklist',
                         action='store', default='',
@@ -125,9 +125,9 @@ if __name__ == '__main__':
                         help='Additional parameters(key=value) to the input file, space separated')
     args = parser.parse_args()
     if args.pci_addr:
-        pci_details = pci.pci_info(args.pci_addr, type=args.type, pci_blacklist=args.pci_addr_blacklist, type_blacklist=args.type_blacklist)
+        pci_details = pci.pci_info(args.pci_addr, pci_type=args.pci_type, pci_blacklist=args.pci_addr_blacklist, type_blacklist=args.type_blacklist)
     else:
-        pci_details = pci.all_pci_info(type=args.type, pci_blacklist=args.pci_addr_blacklist, type_blacklist=args.type_blacklist)
+        pci_details = pci.all_pci_info(pci_type=args.pci_type, pci_blacklist=args.pci_addr_blacklist, type_blacklist=args.type_blacklist)
     if not pci_details:
         logger.info("No PCI Found")
         sys.exit(0)

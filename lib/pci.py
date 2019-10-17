@@ -482,7 +482,7 @@ def get_secondary_ioa(primary_ioa):
     return ''
 
 
-def pci_info(pci_addrs, type='', pci_blacklist='', type_blacklist=''):
+def pci_info(pci_addrs, pci_type='', pci_blacklist='', type_blacklist=''):
     """
     Get all the information for given PCI addresses (comma separated).
 
@@ -502,13 +502,12 @@ def pci_info(pci_addrs, type='', pci_blacklist='', type_blacklist=''):
         pci_addrs = list(set(pci_addrs) - set(pci_blacklist))
     pci_addrs.sort()
     pci_list = []
-    if type:
-        type = list(set(type.split(',')))
+    if pci_type:
+        pci_type = list(set(pci_type.split(',')))
     else:
-        type = []
+        pci_type = []
     if type_blacklist:
         type_blacklist = type_blacklist.split(',')
-        type = list(set(type) - set(type_blacklist))
 
     for pci_addr in pci_addrs:
         pci_dic = {}
@@ -518,10 +517,12 @@ def pci_info(pci_addrs, type='', pci_blacklist='', type_blacklist=''):
         pci_dic['adapter_description'] = get_pci_name(pci_dic['functions'][0])
         pci_dic['adapter_id'] = get_pci_id(pci_dic['functions'][0])
         pci_dic['adapter_type'] = get_pci_type(pci_dic['functions'][0])
-        if pci_dic['adapter_type'] not in type:
-            continue
         pci_dic['driver'] = get_driver(pci_dic['functions'][0])
         pci_dic['slot'] = get_slot_from_sysfs(pci_dic['functions'][0])
+        if pci_dic['adapter_type'] in type_blacklist:
+            continue
+        elif "All" not in pci_type and pci_dic['adapter_type'] not in pci_type:
+            continue
         pci_dic['interfaces'] = []
         pci_dic['class'] = get_pci_class_name(pci_dic['functions'][0])
         for fun in pci_dic['functions']:
@@ -554,10 +555,10 @@ def pci_info(pci_addrs, type='', pci_blacklist='', type_blacklist=''):
     return pci_list
 
 
-def all_pci_info(type='', pci_blacklist='', type_blacklist=''):
+def all_pci_info(pci_type='', pci_blacklist='', type_blacklist=''):
     """
     Get all the information for all PCI addresses in the system.
     :return: list of dictionaries of PCI information
     """
     pci_addrs = get_pci_addresses()
-    return pci_info(",".join(pci_addrs), type=type, pci_blacklist=pci_blacklist, type_blacklist=type_blacklist)
+    return pci_info(",".join(pci_addrs), pci_type=pci_type, pci_blacklist=pci_blacklist, type_blacklist=type_blacklist)
