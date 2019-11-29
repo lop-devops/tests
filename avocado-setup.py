@@ -442,11 +442,12 @@ def parse_test_config(test_config_file, avocado_bin, enable_kvm):
         (env_ver, env_type, cmdpat) = helper.get_env_type(enable_kvm)
         norun_tests = []
         # Get common set of not needed tests
+        env = 'norun_%s' % env_type
         dist = 'norun_%s' % helper.get_dist()[0]
         major = 'norun_%s' % env_ver.split('.')[0]
         minor = 'norun_%s' % env_ver
         minor_env = 'norun_%s_%s' % (env_ver, env_type)
-        for section in [dist, major, minor, minor_env]:
+        for section in [env, dist, major, minor, minor_env]:
             if NORUNTESTFILE.has_section(section):
                 norun_tests.extend(NORUNTESTFILE.get(section, 'tests').split(','))
         norun_tests = list(filter(None, norun_tests))
