@@ -301,7 +301,7 @@
     Some tests have the potential of causing system crashes / hangs. Such test in cfg file hinders the run of tests that follow.
     So, if such tests are identified and need to be "not run" for a particular environment (Since they can run fine on others),
     we have a provision to mention such tests to not run.
-    Please have a look at "config/wrapper/no_run_test.conf"
+    Please have a look at "config/wrapper/no_run_tests.conf"
 
 
 7. REFERENCE LINKS
