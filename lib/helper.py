@@ -152,5 +152,5 @@ def install_packages(package_list):
         if status != 0:
             logger.error("%s not installed" % pkg)
             logger.debug(output)
-        not_installed = True
+            not_installed = True
     return not_installed
