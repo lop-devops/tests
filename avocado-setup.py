@@ -442,23 +442,36 @@ def parse_test_config(test_config_file, avocado_bin, enable_kvm):
         (env_ver, env_type, cmdpat) = helper.get_env_type(enable_kvm)
         norun_tests = []
         # Get common set of not needed tests
+        env = 'norun_%s' % env_type
         dist = 'norun_%s' % helper.get_dist()[0]
         major = 'norun_%s' % env_ver.split('.')[0]
         minor = 'norun_%s' % env_ver
         minor_env = 'norun_%s_%s' % (env_ver, env_type)
-        for section in [dist, major, minor, minor_env]:
+        for section in [env, dist, major, minor, minor_env]:
             if NORUNTESTFILE.has_section(section):
                 norun_tests.extend(NORUNTESTFILE.get(section, 'tests').split(','))
+        norun_tests = list(filter(None, norun_tests))
 
         with open(test_config_file, 'r') as fp:
             test_config_contents = fp.read()
         test_list = []
         mux_flag = 0
         for line in test_config_contents.splitlines():
+            norun_flag = False
             test_dic = {}
-            if line in norun_tests:
-                continue
+            # Comment line or Empty line filtering
             if line.startswith("#") or not line:
+                norun_flag = True
+            # Filtering <test yaml> combination
+            elif line in norun_tests:
+                norun_flag = True
+            # Filtering <string*> pattern
+            else:
+                for norun_test in norun_tests:
+                    if norun_test.endswith('*') and line.startswith(norun_test[:-1]):
+                        norun_flag = True
+                        break
+            if norun_flag:
                 continue
             line = line.split()
             test_dic['test'] = line[0].strip('$')
