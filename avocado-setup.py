@@ -219,7 +219,8 @@ def install_repo(path, name):
     :param repo: repository path
     :param name: name of the repository
     """
-    cmd = "cd %s;make requirements;make requirements-selftests;python setup.py install" % path
+    cmd = "cd %s;make requirements;make requirements-selftests;python%s setup.py install" % (path,
+                                                                                             sys.version_info.major)
     helper.runcmd(cmd, info_str="Installing %s from %s" % (name, path),
                   err_str="Failed to install %s repository:" % name)
 
