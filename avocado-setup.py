@@ -40,9 +40,11 @@ INPUTFILE.optionxform = str
 AVOCADO_REPO = CONFIGFILE.get('repo', 'avocado')
 AVOCADO_VT_REPO = CONFIGFILE.get('repo', 'avocado_vt')
 TEST_REPOS = CONFIGFILE.get('repo', 'tests').split(',')
+FFDC_REPO = CONFIGFILE.get('repo', 'ffdc')
 TEST_DIR = "%s/tests" % BASE_PATH
 DATA_DIR = "%s/data" % BASE_PATH
 LOG_DIR = "%s/results" % BASE_PATH
+FFDC_DIR = "%s/ffdc" % BASE_PATH
 
 logger = logger_init(filepath=BASE_PATH).getlogger()
 
@@ -152,7 +154,8 @@ def env_check(enable_kvm):
     env_deps = []
     # try to check env specific packages
     if CONFIGFILE.has_section('deps_%s_%s' % (env_ver, env_type)):
-        packages = CONFIGFILE.get('deps_%s_%s' % (env_ver, env_type), 'packages')
+        packages = CONFIGFILE.get('deps_%s_%s' %
+                                  (env_ver, env_type), 'packages')
         if packages != '':
             env_deps = packages.split(',')
     for dep in env_deps:
@@ -165,7 +168,8 @@ def env_check(enable_kvm):
             logger.info("Please install following "
                         "dependancy packages %s", " ".join(not_found))
         elif args.install_deps:
-            logger.warning("Installing missing packages %s", " ".join(not_found))
+            logger.warning("Installing missing packages %s",
+                           " ".join(not_found))
             if helper.install_packages(not_found):
                 logger.error("Some packages not installed")
                 sys.exit(1)
@@ -238,15 +242,26 @@ def get_repo(repo, basepath, install=False):
     if os.path.isdir(repo_path):
         cmd = "cd %s;git pull --no-edit" % repo_path
         helper.runcmd(cmd,
-                      info_str="Updating the repo: %s in %s" % (repo_name, repo_path),
+                      info_str="Updating the repo: %s in %s" % (
+                          repo_name, repo_path),
                       err_str="Failed to update %s repository:" % repo_name)
     else:
         cmd = "cd %s;git clone %s %s" % (basepath, repo, repo_name)
         helper.runcmd(cmd,
-                      info_str="Cloning the repo: %s in %s" % (repo_name, repo_path),
+                      info_str="Cloning the repo: %s in %s" % (
+                          repo_name, repo_path),
                       err_str="Failed to clone %s repository:" % repo_name)
     if install:
         install_repo(repo_path, repo_name)
+
+
+def configure_ffdc():
+    plugin = CONFIGFILE.get('ffdc-plugin', 'plugin').split(',')
+    for dep in plugin:
+        cmd = "%s/ServiceReport/%s" % (FFDC_DIR, ('servicereport -p %s' % dep))
+        helper.runcmd(cmd,
+                      info_str="running FFDC from %s" % plugin,
+                      err_str="fddc failed")
 
 
 def install_optional_plugin(plugin):
@@ -334,6 +349,14 @@ def bootstrap(enable_kvm=False):
                   err_str="Failed to create test repo dir. Error: ")
     for repo in TEST_REPOS:
         get_repo(repo, TEST_DIR)
+    ffdc_bootstrap()
+
+
+def ffdc_bootstrap():
+    logger.info("Bootstrapping ffdc")
+    helper.runcmd('mkdir -p %s' % FFDC_DIR,
+                  debug_str="Creating FFDC repo dir %s" % FFDC_DIR)
+    get_repo(FFDC_REPO, FFDC_DIR, True)
 
 
 def run_test(testsuite, avocado_bin):
@@ -357,7 +380,8 @@ def run_test(testsuite, avocado_bin):
         cmd = "%s run %s" % (avocado_bin, testsuite.test)
         if testsuite.mux:
             cmd += " -m %s" % os.path.join(TEST_DIR, testsuite.mux)
-        cmd += " --force-job-id %s %s" % (testsuite.id, TestSuite.host_add_args)
+        cmd += " --force-job-id %s %s" % (testsuite.id,
+                                          TestSuite.host_add_args)
         if testsuite.args:
             cmd += testsuite.args
 
@@ -420,7 +444,8 @@ def edit_mux_file(test_config_name, mux_file_path, tmp_mux_path):
             mux_key = temp_line[0]
             mux_value = temp_line[1]
             if key == mux_key.strip():
-                line = line.replace('%s' % line.strip(), '%s: %s' % (key, value))
+                line = line.replace('%s' % line.strip(),
+                                    '%s: %s' % (key, value))
         mux_str_edited.append(line)
 
     with open(tmp_mux_path, 'w') as mux_fp:
@@ -449,7 +474,8 @@ def parse_test_config(test_config_file, avocado_bin, enable_kvm):
         minor_env = 'norun_%s_%s' % (env_ver, env_type)
         for section in [env, dist, major, minor, minor_env]:
             if NORUNTESTFILE.has_section(section):
-                norun_tests.extend(NORUNTESTFILE.get(section, 'tests').split(','))
+                norun_tests.extend(NORUNTESTFILE.get(
+                    section, 'tests').split(','))
         norun_tests = list(filter(None, norun_tests))
 
         with open(test_config_file, 'r') as fp:
@@ -489,13 +515,15 @@ def parse_test_config(test_config_file, avocado_bin, enable_kvm):
             if len(line) > 1:
                 test_dic['mux'] = line[1]
                 mux_flag = 1
-                test_dic['name'] = "%s_%s" % (test_dic['name'], test_dic['mux'].split("/")[-1].split(".")[0])
+                test_dic['name'] = "%s_%s" % (test_dic['name'], test_dic[
+                                              'mux'].split("/")[-1].split(".")[0])
                 if args.inputfile:
                     mux_file = os.path.join(TEST_DIR, test_dic['mux'])
                     if not os.path.isfile(mux_file):
                         logger.debug("%s does not exist", mux_file)
                         continue
-                    tmp_mux_path = os.path.join('/tmp/mux/', "%s_%s.yaml" % (test_config_name, test_dic['name']))
+                    tmp_mux_path = os.path.join(
+                        '/tmp/mux/', "%s_%s.yaml" % (test_config_name, test_dic['name']))
                     edit_mux_file(test_config_name, mux_file, tmp_mux_path)
                     test_dic['mux'] = tmp_mux_path
             count = 0
@@ -624,7 +652,8 @@ if __name__ == '__main__':
 
     if args.inputfile:
         if not os.path.isfile(args.inputfile):
-            logger.debug("Input file %s not found. Continuing without input file", args.inputfile)
+            logger.debug(
+                "Input file %s not found. Continuing without input file", args.inputfile)
             args.inputfile = None
 
     if args.run_suite:
@@ -650,6 +679,8 @@ if __name__ == '__main__':
         test_suites = args.run_suite.split(',')
         if args.install_guest:
             test_suites.insert(0, 'guest_install')
+        print ("\n in")
+        configure_ffdc()
         avocado_bin = helper.get_avocado_bin()
         Testsuites = {}
         # Validate if given test suite is available
@@ -657,7 +688,8 @@ if __name__ == '__main__':
         Testsuites_list = []
         for test_suite in test_suites:
             if 'host' in test_suite:
-                test_list = parse_test_config(test_suite, avocado_bin, args.enable_kvm)
+                test_list = parse_test_config(
+                    test_suite, avocado_bin, args.enable_kvm)
                 if test_list is None:
                     Testsuites[test_suite] = TestSuite(test_suite, outputdir,
                                                        args.vt_type)
@@ -671,7 +703,8 @@ if __name__ == '__main__':
                     test_suite_name = "%s_%s" % (test_suite, test['name'])
                     Testsuites[test_suite_name] = TestSuite(test_suite_name,
                                                             outputdir, args.vt_type,
-                                                            test['test'], test['mux'],
+                                                            test['test'], test[
+                                                                'mux'],
                                                             test['args'])
                     Testsuites_list.append(test_suite_name)
 
@@ -692,11 +725,13 @@ if __name__ == '__main__':
                     time.sleep(int(args.interval))
 
         # List the final output
-        summary_output = ["Summary of test results can be found below:\n%-75s %-10s %-20s" % ('TestSuite', 'TestRun', 'Summary')]
+        summary_output = ["Summary of test results can be found below:\n%-75s %-10s %-20s" %
+                          ('TestSuite', 'TestRun', 'Summary')]
         for test_suite in Testsuites_list:
             summary_output.append(' ')
             summary_output.append('%-75s %-10s %-20s' % (Testsuites[test_suite].name,
-                                                         Testsuites[test_suite].run,
+                                                         Testsuites[
+                                                             test_suite].run,
                                                          Testsuites[test_suite].runsummary))
             summary_output.append(Testsuites[test_suite].runlink)
         logger.info("\n".join(summary_output))
