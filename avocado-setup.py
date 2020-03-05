@@ -19,6 +19,7 @@ import os
 import shutil
 import time
 import sys
+import shlex
 import argparse
 import configparser
 import binascii
@@ -456,6 +457,7 @@ def parse_test_config(test_config_file, avocado_bin, enable_kvm):
             test_config_contents = fp.read()
         test_list = []
         mux_flag = 0
+        arg_flag = 0
         for line in test_config_contents.splitlines():
             norun_flag = False
             test_dic = {}
@@ -473,7 +475,8 @@ def parse_test_config(test_config_file, avocado_bin, enable_kvm):
                         break
             if norun_flag:
                 continue
-            line = line.split()
+            # split line ignoring quotes used for additional args
+            line = shlex.split(line)
             test_dic['test'] = line[0].strip('$')
             test_dic['name'] = test_dic['test'].split("/")[-1]
             if ":" in test_dic['test'].split("/")[-1]:
@@ -486,28 +489,37 @@ def parse_test_config(test_config_file, avocado_bin, enable_kvm):
             if helper.runcmd(cmd, ignore_status=True)[0] != 0:
                 logger.debug("%s does not exist", test_dic['test'])
                 continue
+            # Handling parameters after test from cfg
             if len(line) > 1:
-                test_dic['mux'] = line[1]
-                mux_flag = 1
-                test_dic['name'] = "%s_%s" % (test_dic['name'], test_dic['mux'].split("/")[-1].split(".")[0])
-                if args.inputfile:
-                    mux_file = os.path.join(TEST_DIR, test_dic['mux'])
-                    if not os.path.isfile(mux_file):
-                        logger.debug("%s does not exist", mux_file)
-                        continue
-                    tmp_mux_path = os.path.join('/tmp/mux/', "%s_%s.yaml" % (test_config_name, test_dic['name']))
-                    edit_mux_file(test_config_name, mux_file, tmp_mux_path)
-                    test_dic['mux'] = tmp_mux_path
+                # Handling yaml file from second param
+                if '.yaml' in line[1]:
+                    test_dic['mux'] = line[1]
+                    mux_flag = 1
+                    test_dic['name'] = "%s_%s" % (test_dic['name'], test_dic['mux'].split("/")[-1].split(".")[0])
+                    if args.inputfile:
+                        mux_file = os.path.join(TEST_DIR, test_dic['mux'])
+                        if not os.path.isfile(mux_file):
+                            logger.debug("%s does not exist", mux_file)
+                            continue
+                        tmp_mux_path = os.path.join('/tmp/mux/', "%s_%s.yaml" % (test_config_name, test_dic['name']))
+                        edit_mux_file(test_config_name, mux_file, tmp_mux_path)
+                        test_dic['mux'] = tmp_mux_path
+                # Handling additional args from second param
+                else:
+                    arg_flag = 1
+                    test_dic['args'] = " %s" % line[1]
             count = 0
             for list_dic in test_list:
                 if test_dic['name'] == list_dic['name'].split('.')[0]:
                     count += 1
             if count:
                 test_dic['name'] += ".%d" % (count + 1)
+            # Handle additional args after yaml(second arg) from third param
             if len(line) > 2:
-                test_dic['args'] = " --execution-order %s " % line[2]
+                arg_flag = 1
+                test_dic['args'] = " %s" % line[2]
             test_list.append(test_dic)
-        if mux_flag == 0:
+        if mux_flag == 0 and arg_flag == 0:
             single_test_dic = {}
             single_test_dic['name'] = test_config_name
             single_test_dic['test'] = ''
