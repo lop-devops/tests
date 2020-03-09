@@ -26,6 +26,9 @@
 3. PREREQUISITES:
 
     Python3 is installed on the System.
+    Note : If python3 bin is not pointing to python binary in the system, please create of soft link of python 
+	   pointing to python3
+	   ex:  ln -s /usr/bin/python3 /usr/bin/python
 
     The "avocado-setup.py" script must always be run as root or as a user with
     root privileges or you risk permission denied errors.
