@@ -18,6 +18,7 @@
 import os
 import shutil
 import time
+import json
 import sys
 import shlex
 import argparse
@@ -377,7 +378,13 @@ def run_test(testsuite, avocado_bin):
     logger.info('')
     result_link = testsuite.jobdir()
     if result_link:
-        result_link += "/job.log"
+        result_json = result_link + "/results.json"
+        result_link += "/job.log\n"
+        with open(result_json, encoding = "utf-8") as fp:
+            result_state = json.load(fp)
+        for state in ['pass', 'cancel', 'errors', 'failures', 'skip', 'warn', 'interrupt']:
+            if state in result_state.keys():
+                result_link += "| %s %s |" % (state.upper(), str(result_state[state]))
         testsuite.runstatus("Run", "Successfully executed", result_link)
     else:
         testsuite.runstatus("Not_Run", "Unable to find job log file")
