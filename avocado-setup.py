@@ -30,6 +30,8 @@ from lib import helper
 
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = "%s/config/wrapper/env.conf" % BASE_PATH
+prescript="%s/config/prescript" % BASE_PATH
+postscipt="%s/config/postscript" % BASE_PATH
 NORUNTEST_PATH = "%s/config/wrapper/no_run_tests.conf" % BASE_PATH
 TEST_CONF_PATH = "%s/config/tests/" % BASE_PATH
 CONFIGFILE = configparser.SafeConfigParser()
@@ -44,8 +46,9 @@ TEST_REPOS = CONFIGFILE.get('repo', 'tests').split(',')
 TEST_DIR = "%s/tests" % BASE_PATH
 DATA_DIR = "%s/data" % BASE_PATH
 LOG_DIR = "%s/results" % BASE_PATH
-
 logger = logger_init(filepath=BASE_PATH).getlogger()
+prescript_dir=CONFIGFILE.get('script-dir', 'prescriptdir')
+postscipt_dir=CONFIGFILE.get('script-dir', 'postscriptdir')
 
 
 class TestSuite():
@@ -267,6 +270,7 @@ def install_optional_plugin(plugin):
         pass
 
 
+
 def create_config(logdir):
     """
     Create the local avocado config file
@@ -336,6 +340,14 @@ def bootstrap(enable_kvm=False):
     for repo in TEST_REPOS:
         get_repo(repo, TEST_DIR)
 
+    if len(os.listdir(prescript)):
+        if not os.path.exists(prescript_dir):
+            os.makedirs(prescript_dir)
+        helper.copy_dir_file(prescript, prescript_dir)
+    if len(os.listdir(postscipt)):
+        if not os.path.exists(prescript_dir):
+            os.makedirs(postscipt_dir)
+        helper.copy_dir_file(postscipt, postscipt_dir)
 
 def run_test(testsuite, avocado_bin):
     """
@@ -393,7 +405,11 @@ def env_clean():
         helper.runcmd(cmd, ignore_status=True,
                       err_str="Error in removing package: %s" % package,
                       debug_str="Uninstalling %s" % package)
+    if os.path.isdir(prescript_dir):
+        helper.remove_file(prescript, prescript_dir)
 
+    if os.path.isdir(postscipt_dir):
+        helper.remove_file(postscipt, postscipt_dir)
 
 def edit_mux_file(test_config_name, mux_file_path, tmp_mux_path):
     """
