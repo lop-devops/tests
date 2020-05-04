@@ -18,6 +18,7 @@ import subprocess
 import os
 import re
 import sys
+import shutil
 
 from .logger import logger_init
 
@@ -154,3 +155,27 @@ def install_packages(package_list):
             logger.debug(output)
             not_installed = True
     return not_installed
+
+
+def copy_dir_file(src, dest):
+    """
+    Copy all files from one dir to other dir
+    """
+    for item in os.listdir(src):
+        s_file = os.path.join(src, item)
+        d_file = os.path.join(dest, item)
+        if os.path.exists(d_file):
+            logger.info("file already exist in %s it will going to overwrite with new file" % dest)
+        shutil.copy2(s_file, d_file)
+    logger.info("copied all files from  %s to %s" % (src, dest))
+
+
+def remove_file(src, dest):
+    """
+    Remove Files from Destination Folder  which is common in Source  and Destination
+    """
+    for item in os.listdir(src):
+        d_file = os.path.join(dest, item)
+        if os.path.exists(d_file):
+            os.remove(d_file)
+    logger.debug("%s file deleted" % d_file)

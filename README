@@ -322,8 +322,13 @@
     OpenPOWER Host OS repositories on GitHub:
       https://github.com/open-power-host-os
 
+8. Pre/Post Script support 
 
-8. KNOWN ISSUES AND LIMITATION
+  User need to popluate their pre/post scripts as  prescript and postscript directory
+  * Create a directory named "prescript" inside config/ directory  and populated with pre scripts
+  * Create a directory named "postscript" inside config/ directory and populated with post scripts
+
+9. KNOWN ISSUES AND LIMITATION
 
     Refer to the Issues section of this repository, linked below, for details on bugs, limitations, future enhancements, and investigations:
       https://github.com/open-power-host-os/tests/issues?q=is%3Aopen+is%3Aissue
