@@ -18,6 +18,7 @@
 import os
 import shutil
 import time
+import json
 import sys
 import shlex
 import argparse
@@ -389,7 +390,13 @@ def run_test(testsuite, avocado_bin):
     logger.info('')
     result_link = testsuite.jobdir()
     if result_link:
-        result_link += "/job.log"
+        result_json = result_link + "/results.json"
+        result_link += "/job.log\n"
+        with open(result_json, encoding = "utf-8") as fp:
+            result_state = json.load(fp)
+        for state in ['pass', 'cancel', 'errors', 'failures', 'skip', 'warn', 'interrupt']:
+            if state in result_state.keys():
+                result_link += "| %s %s |" % (state.upper(), str(result_state[state]))
         testsuite.runstatus("Run", "Successfully executed", result_link)
     else:
         testsuite.runstatus("Not_Run", "Unable to find job log file")
@@ -719,13 +726,22 @@ if __name__ == '__main__':
                 if args.interval:
                     time.sleep(int(args.interval))
 
+        # Finding the space needed for formatting result summary
+        test_name_list = []
+        for test_suite in Testsuites_list:
+            test_name_list.append(Testsuites[test_suite].name)
+        test_name_list.append(Testsuites[Testsuites_list[0]].runlink.split('\n')[0])
+        test_name_list.append(Testsuites[Testsuites_list[0]].runlink.split('\n')[1])
+        longest_name_length = len((sorted(test_name_list, key=len)[-1])) + 5
+
         # List the final output
-        summary_output = ["Summary of test results can be found below:\n%-75s %-10s %-20s" % ('TestSuite', 'TestRun', 'Summary')]
+        summary_output = ["Summary of test results can be found below:\n%s %s %s" % ('TestSuite'.ljust(longest_name_length),
+                                                                                     'TestRun'.ljust(10), 'Summary')]
         for test_suite in Testsuites_list:
             summary_output.append(' ')
-            summary_output.append('%-75s %-10s %-20s' % (Testsuites[test_suite].name,
-                                                         Testsuites[test_suite].run,
-                                                         Testsuites[test_suite].runsummary))
+            summary_output.append('%s %s %s' % (Testsuites[test_suite].name.ljust(longest_name_length),
+                                                Testsuites[test_suite].run.ljust(10),
+                                                Testsuites[test_suite].runsummary))
             summary_output.append(Testsuites[test_suite].runlink)
         logger.info("\n".join(summary_output))
 
