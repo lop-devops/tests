@@ -340,15 +340,15 @@ def bootstrap(enable_kvm=False):
                   err_str="Failed to create test repo dir. Error: ")
     for repo in TEST_REPOS:
         get_repo(repo, TEST_DIR)
-
-    if len(os.listdir(prescript)):
-        if not os.path.exists(prescript_dir):
-            os.makedirs(prescript_dir)
-        helper.copy_dir_file(prescript, prescript_dir)
-    if len(os.listdir(postscipt)):
-        if not os.path.exists(prescript_dir):
-            os.makedirs(postscipt_dir)
-        helper.copy_dir_file(postscipt, postscipt_dir)
+    if args.enable_prepost:
+        if len(os.listdir(prescript)):
+            if not os.path.exists(prescript_dir):
+                os.makedirs(prescript_dir)
+            helper.copy_dir_file(prescript, prescript_dir)
+        if len(os.listdir(postscipt)):
+            if not os.path.exists(prescript_dir):
+                os.makedirs(postscipt_dir)
+            helper.copy_dir_file(postscipt, postscipt_dir)
 
 def run_test(testsuite, avocado_bin):
     """
@@ -608,6 +608,9 @@ if __name__ == '__main__':
                         help='To remove/uninstall autotest, avocado from system')
     parser.add_argument('--enable-kvm', dest="enable_kvm", action='store_true',
                         default=False, help='enable bootstrap kvm tests')
+
+    parser.add_argument('--enable-prepost', dest="enable_prepost",
+                        default=False, help='enable pre/post script run through bootstrap')
 
     args = parser.parse_args()
     if helper.get_machine_type() == 'pHyp':
