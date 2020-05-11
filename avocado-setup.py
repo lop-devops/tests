@@ -31,8 +31,8 @@ from lib import helper
 
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = "%s/config/wrapper/env.conf" % BASE_PATH
-prescript="%s/config/prescript" % BASE_PATH
-postscipt="%s/config/postscript" % BASE_PATH
+prescript = "%s/config/prescript" % BASE_PATH
+postscipt = "%s/config/postscript" % BASE_PATH
 NORUNTEST_PATH = "%s/config/wrapper/no_run_tests.conf" % BASE_PATH
 TEST_CONF_PATH = "%s/config/tests/" % BASE_PATH
 CONFIGFILE = configparser.SafeConfigParser()
@@ -48,8 +48,8 @@ TEST_DIR = "%s/tests" % BASE_PATH
 DATA_DIR = "%s/data" % BASE_PATH
 LOG_DIR = "%s/results" % BASE_PATH
 logger = logger_init(filepath=BASE_PATH).getlogger()
-prescript_dir=CONFIGFILE.get('script-dir', 'prescriptdir')
-postscipt_dir=CONFIGFILE.get('script-dir', 'postscriptdir')
+prescript_dir = CONFIGFILE.get('script-dir', 'prescriptdir')
+postscipt_dir = CONFIGFILE.get('script-dir', 'postscriptdir')
 
 
 class TestSuite():
@@ -271,7 +271,6 @@ def install_optional_plugin(plugin):
         pass
 
 
-
 def create_config(logdir):
     """
     Create the local avocado config file
@@ -350,6 +349,7 @@ def bootstrap(enable_kvm=False):
             os.makedirs(postscipt_dir)
         helper.copy_dir_file(postscipt, postscipt_dir)
 
+
 def run_test(testsuite, avocado_bin):
     """
     To run given testsuite
@@ -392,7 +392,7 @@ def run_test(testsuite, avocado_bin):
     if result_link:
         result_json = result_link + "/results.json"
         result_link += "/job.log\n"
-        with open(result_json, encoding = "utf-8") as fp:
+        with open(result_json, encoding="utf-8") as fp:
             result_state = json.load(fp)
         for state in ['pass', 'cancel', 'errors', 'failures', 'skip', 'warn', 'interrupt']:
             if state in result_state.keys():
@@ -417,6 +417,7 @@ def env_clean():
 
     if os.path.isdir(postscipt_dir):
         helper.remove_file(postscipt, postscipt_dir)
+
 
 def edit_mux_file(test_config_name, mux_file_path, tmp_mux_path):
     """
