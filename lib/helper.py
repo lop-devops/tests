@@ -22,9 +22,11 @@ import shutil
 
 from .logger import logger_init
 
-LOG_PATH = os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir)))
 
-logger = logger_init(filepath=LOG_PATH).getlogger()
+def get_logger(logger_path):
+    global logger
+    logger = logger_init(filepath=logger_path).getlogger()
+    return logger
 
 
 def runcmd(cmd, ignore_status=False, err_str="", info_str="", debug_str=""):
@@ -126,6 +128,20 @@ def get_avocado_bin(ignore_status=False):
     """
     return runcmd('which avocado', ignore_status=ignore_status,
                   err_str="avocado command not installed or not found in path")[1]
+
+
+def copy_file(source, destination):
+    """
+    Copy source file to destination provided.
+    If destination does not exist, creates one.
+    If source file does not exist, logs error and returns.
+    """
+    if not os.path.isdir(destination):
+        os.makedirs(destination)
+    if not os.path.isfile(source):
+        logger.error("File %s not present" % source)
+        return
+    shutil.copy(source, destination)
 
 
 def get_install_cmd():
