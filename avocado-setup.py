@@ -731,9 +731,12 @@ if __name__ == '__main__':
         test_name_list = []
         for test_suite in Testsuites_list:
             test_name_list.append(Testsuites[test_suite].name)
-        test_name_list.append(Testsuites[Testsuites_list[0]].runlink.split('\n')[0])
-        test_name_list.append(Testsuites[Testsuites_list[0]].runlink.split('\n')[1])
-        longest_name_length = len((sorted(test_name_list, key=len)[-1])) + 5
+            if Testsuites[test_suite].runlink:
+                test_name_list.extend(Testsuites[test_suite].runlink.split('\n'))
+        if test_name_list:
+            longest_name_length = len((sorted(test_name_list, key=len)[-1])) + 5
+        else:
+            longest_name_length = 10
 
         # List the final output
         summary_output = ["Summary of test results can be found below:\n%s %s %s" % ('TestSuite'.ljust(longest_name_length),
