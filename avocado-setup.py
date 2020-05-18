@@ -340,14 +340,16 @@ def bootstrap(enable_kvm=False):
     for repo in TEST_REPOS:
         get_repo(repo, TEST_DIR)
 
-    if len(os.listdir(prescript)):
-        if not os.path.exists(prescript_dir):
-            os.makedirs(prescript_dir)
-        helper.copy_dir_file(prescript, prescript_dir)
-    if len(os.listdir(postscipt)):
-        if not os.path.exists(prescript_dir):
-            os.makedirs(postscipt_dir)
-        helper.copy_dir_file(postscipt, postscipt_dir)
+    if os.path.isdir(prescript):
+        if len(os.listdir(prescript)):
+            if not os.path.exists(prescript_dir):
+                os.makedirs(prescript_dir)
+            helper.copy_dir_file(prescript, prescript_dir)
+    if os.path.isdir(postscipt):
+        if len(os.listdir(postscipt)):
+            if not os.path.exists(prescript_dir):
+                os.makedirs(postscipt_dir)
+            helper.copy_dir_file(postscipt, postscipt_dir)
 
 
 def run_test(testsuite, avocado_bin):
