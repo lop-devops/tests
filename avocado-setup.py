@@ -32,7 +32,7 @@ from lib import helper
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = "%s/config/wrapper/env.conf" % BASE_PATH
 prescript = "%s/config/prescript" % BASE_PATH
-postscipt = "%s/config/postscript" % BASE_PATH
+postscript = "%s/config/postscript" % BASE_PATH
 NORUNTEST_PATH = "%s/config/wrapper/no_run_tests.conf" % BASE_PATH
 TEST_CONF_PATH = "%s/config/tests/" % BASE_PATH
 CONFIGFILE = configparser.SafeConfigParser()
@@ -49,7 +49,7 @@ DATA_DIR = "%s/data" % BASE_PATH
 LOG_DIR = "%s/results" % BASE_PATH
 logger = logger_init(filepath=BASE_PATH).getlogger()
 prescript_dir = CONFIGFILE.get('script-dir', 'prescriptdir')
-postscipt_dir = CONFIGFILE.get('script-dir', 'postscriptdir')
+postscript_dir = CONFIGFILE.get('script-dir', 'postscriptdir')
 
 
 class TestSuite():
@@ -345,11 +345,11 @@ def bootstrap(enable_kvm=False):
             if not os.path.exists(prescript_dir):
                 os.makedirs(prescript_dir)
             helper.copy_dir_file(prescript, prescript_dir)
-    if os.path.isdir(postscipt):
-        if len(os.listdir(postscipt)):
-            if not os.path.exists(prescript_dir):
-                os.makedirs(postscipt_dir)
-            helper.copy_dir_file(postscipt, postscipt_dir)
+    if os.path.isdir(postscript):
+        if len(os.listdir(postscript)):
+            if not os.path.exists(postscript_dir):
+                os.makedirs(postscript_dir)
+            helper.copy_dir_file(postscript, postscript_dir)
 
 
 def run_test(testsuite, avocado_bin):
@@ -417,8 +417,8 @@ def env_clean():
     if os.path.isdir(prescript_dir):
         helper.remove_file(prescript, prescript_dir)
 
-    if os.path.isdir(postscipt_dir):
-        helper.remove_file(postscipt, postscipt_dir)
+    if os.path.isdir(postscript_dir):
+        helper.remove_file(postscript, postscript_dir)
 
 
 def edit_mux_file(test_config_name, mux_file_path, tmp_mux_path):
