@@ -19,6 +19,7 @@ import os
 import re
 import sys
 import shutil
+import stat
 
 from .logger import logger_init
 
@@ -167,6 +168,8 @@ def copy_dir_file(src, dest):
         if os.path.exists(d_file):
             logger.info("file already exist in %s it will going to overwrite with new file" % dest)
         shutil.copy2(s_file, d_file)
+        # changing permission to 744
+        os.chmod(d_file, stat.S_IRWXU | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
     logger.info("copied all files from  %s to %s" % (src, dest))
 
 
