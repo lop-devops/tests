@@ -422,10 +422,10 @@ def env_clean():
         helper.runcmd(cmd, ignore_status=True,
                       err_str="Error in removing package: %s" % package,
                       debug_str="Uninstalling %s" % package)
-    if os.path.isdir(prescript_dir):
+    if os.path.isdir(prescript):
         helper.remove_file(prescript, prescript_dir)
 
-    if os.path.isdir(postscript_dir):
+    if os.path.isdir(postscript):
         helper.remove_file(postscript, postscript_dir)
 
 
