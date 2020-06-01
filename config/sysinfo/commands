@@ -13,3 +13,12 @@ ip link
 numactl --hardware show
 lscpu
 fdisk -l
+lsprop /proc/device-tree/ibm,firmware-versions*
+lsprop /proc/device-tree/openprom*
+multipath -ll
+lvdisplay
+netstat -s
+lsblk
+ppc64_cpu --info
+grep -v ^# /etc/sysconfig/kdump*
+grep -v ^# /etc/kdump.conf
