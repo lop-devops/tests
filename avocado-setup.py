@@ -291,6 +291,14 @@ def create_config(logdir):
     config.set('sysinfo.collect', 'profiler', 'True')
     config.set('sysinfo.collect', 'per_test', 'True')
 
+    config.add_section('sysinfo.collectibles')
+    config.set('sysinfo.collectibles', 'commands',
+               os.path.join(BASE_PATH, "config/sysinfo/commands"))
+    config.set('sysinfo.collectibles', 'files',
+               os.path.join(BASE_PATH, "config/sysinfo/files"))
+    config.set('sysinfo.collectibles', 'profilers',
+               os.path.join(BASE_PATH, "config/sysinfo/profilers"))
+
     with open(avocado_conf, 'w+') as conf:
         config.write(conf)
 

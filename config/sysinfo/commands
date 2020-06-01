@@ -1,0 +1,15 @@
+df -mP
+dmesg
+uname -a
+lspci -vvnn
+gcc --version
+ld --version
+hostname
+uptime
+dmidecode
+ifconfig -a
+brctl show
+ip link
+numactl --hardware show
+lscpu
+fdisk -l
