@@ -181,4 +181,4 @@ def remove_file(src, dest):
         d_file = os.path.join(dest, item)
         if os.path.exists(d_file):
             os.remove(d_file)
-    logger.debug("%s file deleted" % d_file)
+        logger.debug("%s file deleted" % d_file)
