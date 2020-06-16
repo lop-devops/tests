@@ -287,7 +287,7 @@ def create_config(logdir):
     config.set('datadir.paths', 'logs_dir', logdir)
 
     config.add_section('sysinfo.collect')
-    config.set('sysinfo.collect', 'enabled', 'True')
+    config.set('sysinfo.collect', 'enabled', 'on')
     config.set('sysinfo.collect', 'profiler', 'True')
     config.set('sysinfo.collect', 'per_test', 'True')
 
