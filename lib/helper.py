@@ -182,3 +182,30 @@ def remove_file(src, dest):
         if os.path.exists(d_file):
             os.remove(d_file)
         logger.debug("%s file deleted" % d_file)
+
+
+def keys_exists(element, *keys):
+    '''
+    Check if *keys (nested) exists in `element` (dict).
+    '''
+    _element = element
+    for key in keys:
+        try:
+            _element = _element[key]
+        except KeyError:
+            return False
+    return True
+
+
+def deep_put(items, data, value):
+    """
+    Assign value in dictionary with multi level nested keys
+    """
+    item = items.pop(0)
+    if items:
+        next_item = {}
+        if not data.get(item):
+            data[item] = next_item
+        deep_put(items, data[item], value)
+    else:
+        data[item] = value

@@ -170,6 +170,7 @@ $ ./avocado-setup.py -h
     >It contains 1 yaml file,namely [ioping.yaml](https://github.com/avocado-framework-tests/avocado-misc-tests/blob/master/io/disk/ioping.py.data/ioping.yaml)
     Now, it has yaml parameters like mode, count, deadline, period, disk, etc.
     Suppose user wants to change only 3 of those values, say disk, wsize and period, user can have that alone in our input file.
+    User must specify config key value matching the branch of the yaml through dotted notation.
     Refer [input_example.txt](input_example.txt) for this example.
 
 

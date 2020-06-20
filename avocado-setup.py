@@ -25,9 +25,11 @@ import argparse
 import configparser
 import binascii
 from shutil import copyfile
+import yaml
 
 from lib.logger import logger_init
 from lib import helper
+from lib import yaml_helper
 
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = "%s/config/wrapper/env.conf" % BASE_PATH
@@ -447,20 +449,25 @@ def edit_mux_file(test_config_name, mux_file_path, tmp_mux_path):
     with open(mux_file_path) as mux_fp:
         mux_str = mux_fp.read()
 
-    mux_str_edited = []
-    for line in mux_str.splitlines():
-        if len(line) == 0 or line.lstrip()[0] == '#':
-            continue
-        for key, value in input_dic.items():
-            temp_line = line.split(":")
-            mux_key = temp_line[0]
-            mux_value = temp_line[1]
-            if key == mux_key.strip():
-                line = line.replace('%s' % line.strip(), '%s: %s' % (key, value))
-        mux_str_edited.append(line)
+    yaml.constructor.SafeConstructor.add_constructor(
+        None, yaml_helper.OverrideConstructor.construct_undefined)
+    mux_json = yaml.load(mux_str, yaml_helper.OverrideLoader)
 
+    for key, value in input_dic.items():
+        if helper.keys_exists(mux_json, *(key.split("."))):
+            if value.lower() in ['true', 'false']:
+                helper.deep_put(
+                    key.split("."), mux_json, json.loads(value.lower()))
+            elif value.isdigit():
+                helper.deep_put(key.split("."), mux_json, int(value))
+            else:
+                helper.deep_put(key.split("."), mux_json, value)
+
+    final_data = yaml.dump(
+        mux_json, Dumper=yaml_helper.OverrideDumper, indent=4,
+        default_flow_style=False, allow_unicode=True)
     with open(tmp_mux_path, 'w') as mux_fp:
-        mux_fp.write(str("\n".join(mux_str_edited)))
+        mux_fp.write(final_data)
 
 
 def parse_test_config(test_config_file, avocado_bin, enable_kvm):
