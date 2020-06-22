@@ -454,14 +454,27 @@ def edit_mux_file(test_config_name, mux_file_path, tmp_mux_path):
     mux_json = yaml.load(mux_str, yaml_helper.OverrideLoader)
 
     for key, value in input_dic.items():
-        if helper.keys_exists(mux_json, *(key.split("."))):
+        keys = key.split(".")
+        keys_list = []
+        st_keys, flag = helper.keys_exists(mux_json, *keys)
+        if flag:
+            if not st_keys:
+                keys_list.append(keys)
+            for st_key in st_keys:
+                for index, key_val in st_key.items():
+                    for val in key_val:
+                        keys[index] = val
+                        # Add only complete list without * in it
+                        if "*" not in keys:
+                            keys_list.append(keys.copy())
+        for key_update in keys_list:
             if value.lower() in ['true', 'false']:
                 helper.deep_put(
-                    key.split("."), mux_json, json.loads(value.lower()))
+                    key_update, mux_json, json.loads(value.lower()))
             elif value.isdigit():
-                helper.deep_put(key.split("."), mux_json, int(value))
+                helper.deep_put(key_update, mux_json, int(value))
             else:
-                helper.deep_put(key.split("."), mux_json, value)
+                helper.deep_put(key_update, mux_json, value)
 
     final_data = yaml.dump(
         mux_json, Dumper=yaml_helper.OverrideDumper, indent=4,

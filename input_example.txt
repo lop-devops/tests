@@ -1,4 +1,10 @@
 [example]
-disk = '/home'
-wsize = '1m'
-period = '5'
+disk = /home
+wsize = 1m
+period = 5 # Treated as int
+io_type.cache_io.mode= -C
+*.fs_type.*.exclude = 1-500
+flag = False # Treated as bool
+
+# All others are treated as strings
+# Note that quotes are not necessary

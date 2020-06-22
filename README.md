@@ -171,8 +171,17 @@ $ ./avocado-setup.py -h
     Now, it has yaml parameters like mode, count, deadline, period, disk, etc.
     Suppose user wants to change only 3 of those values, say disk, wsize and period, user can have that alone in our input file.
     User must specify config key value matching the branch of the yaml through dotted notation.
+    Optinally users can also provide input with '*' as part of config key, if the config key needs to be matched irrespective of its parent branch.
+    Please note that it is better to provide strings without quotes, since it is unnecessary though not harmful
     Refer [input_example.txt](input_example.txt) for this example.
 
+    Note: The newer yaml.[load->dump] implementation preserves all the data types on unchanged yaml files as is.
+    For inputs changed through yaml, the following data types are handled:
+    1. bool (True, true, yes are all True, and False, false, no are all False)
+    2. int is preserved if specified input is digits
+    3. list input is not preserved (treated as string "[1, 2, 3]")
+    4. everything else is treated as string.
+    So if there is any other data type, users must provide them as string in yaml and parse in test accordingly (eg: list type)
 
 5. `--verbose`:
     > Use this option to display test verbose output on the console.

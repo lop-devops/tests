@@ -188,13 +188,20 @@ def keys_exists(element, *keys):
     '''
     Check if *keys (nested) exists in `element` (dict).
     '''
+    st_json = []
     _element = element
-    for key in keys:
+    for cnt, key in enumerate(keys):
+        if key == "*" and cnt != len(keys) - 1:
+            # Check first key alone for existence
+            key = next(iter(_element))
+            st_json.append({cnt: list(_element.keys())})
         try:
             _element = _element[key]
         except KeyError:
-            return False
-    return True
+            return [], False
+        except TypeError:
+            return [], False
+    return st_json, True
 
 
 def deep_put(items, data, value):
