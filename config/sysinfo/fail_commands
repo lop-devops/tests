@@ -1,0 +1,2 @@
+sosreport --batch --tmp-dir $AVOCADO_SYSINFODIR
+supportconfig -R $AVOCADO_SYSINFODIR

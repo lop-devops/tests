@@ -295,8 +295,12 @@ def create_config(logdir):
     config.add_section('sysinfo.collectibles')
     config.set('sysinfo.collectibles', 'commands',
                os.path.join(BASE_PATH, "config/sysinfo/commands"))
+    config.set('sysinfo.collectibles', 'fail_commands',
+               os.path.join(BASE_PATH, "config/sysinfo/fail_commands"))
     config.set('sysinfo.collectibles', 'files',
                os.path.join(BASE_PATH, "config/sysinfo/files"))
+    config.set('sysinfo.collectibles', 'fail_files',
+               os.path.join(BASE_PATH, "config/sysinfo/fail_files"))
     config.set('sysinfo.collectibles', 'profilers',
                os.path.join(BASE_PATH, "config/sysinfo/profilers"))
 
