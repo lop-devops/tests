@@ -1,4 +1,7 @@
 [example]
-disk = '/home'
-wsize = '1m'
-period = '5'
+disk = /home
+wsize = 1m
+period = 5
+setup/fs_type/fs_xfs/exclude = "83,113,136"
+setup/fs_type/*/gen_exclude = 232
+config/preserve_change = False

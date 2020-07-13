@@ -430,7 +430,42 @@ def env_clean():
         helper.remove_file(postscript, postscript_dir)
 
 
-def edit_mux_file(test_config_name, mux_file_path, tmp_mux_path):
+def get_mux_inject_list(output, inp_dict):
+    inj_list = []
+    for key, value in inp_dict.items():
+        if "/" not in key:
+            full_key = "/run:%s" % key
+        else:
+            full_key = "/run/%s" % ':'.join(key.rsplit("/", 1))
+        multi = False
+        if "*" in full_key:
+            st_list = full_key.split("*")
+            prefix = st_list[0]
+            suffix = st_list[1]
+            multi = True
+        for line in output.splitlines():
+            key_to_check = full_key
+            if multi:
+                if prefix in line and suffix in line and "=>" in line:
+                    key_to_check = line.split()[0]
+            key_exist = False
+            if " %s " % key_to_check in line:
+                for item in inj_list:
+                    if key_to_check in item.keys():
+                        key_exist = True
+                        break
+                if not key_exist:
+                    val_to_write = value
+                    if '"' in value:
+                        val_to_write = value.replace('"', '\\"')
+                        val_to_write = '"%s"' % val_to_write
+                    inj_list.append({key_to_check: val_to_write})
+                if not multi:
+                    break
+    return inj_list
+
+
+def process_mux_file(avocado_bin, test_config_name, mux_path):
     """
     Edit the mux file with input given in  input config file.
     """
@@ -441,26 +476,10 @@ def edit_mux_file(test_config_name, mux_file_path, tmp_mux_path):
             input_dic[input_line[0]] = input_line[1]
     else:
         logger.debug("Section %s not found in input file", test_config_name)
-        shutil.copyfile(mux_file_path, tmp_mux_path)
         return
 
-    with open(mux_file_path) as mux_fp:
-        mux_str = mux_fp.read()
-
-    mux_str_edited = []
-    for line in mux_str.splitlines():
-        if len(line) == 0 or line.lstrip()[0] == '#':
-            continue
-        for key, value in input_dic.items():
-            temp_line = line.split(":")
-            mux_key = temp_line[0]
-            mux_value = temp_line[1]
-            if key == mux_key.strip():
-                line = line.replace('%s' % line.strip(), '%s: %s' % (key, value))
-        mux_str_edited.append(line)
-
-    with open(tmp_mux_path, 'w') as mux_fp:
-        mux_fp.write(str("\n".join(mux_str_edited)))
+    _, out = helper.runcmd("%s variants --variants max -m %s" % (avocado_bin, mux_path))
+    return get_mux_inject_list(out, input_dic)
 
 
 def parse_test_config(test_config_file, avocado_bin, enable_kvm):
@@ -536,9 +555,13 @@ def parse_test_config(test_config_file, avocado_bin, enable_kvm):
                         if not os.path.isfile(mux_file):
                             logger.debug("%s does not exist", mux_file)
                             continue
-                        tmp_mux_path = os.path.join('/tmp/mux/', "%s_%s.yaml" % (test_config_name, test_dic['name']))
-                        edit_mux_file(test_config_name, mux_file, tmp_mux_path)
-                        test_dic['mux'] = tmp_mux_path
+                        test_dic['mux'] = mux_file
+                        inj_list = process_mux_file(avocado_bin, test_config_name, mux_file)
+                        if inj_list:
+                            test_dic['mux'] += " --mux-inject"
+                            for inj_dic in inj_list:
+                                for key, value in inj_dic.items():
+                                    test_dic['mux'] += " %s:%s" % (key, value)
                 # Handling additional args from second param
                 else:
                     arg_flag = 1

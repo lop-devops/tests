@@ -170,7 +170,13 @@ $ ./avocado-setup.py -h
     >It contains 1 yaml file,namely [ioping.yaml](https://github.com/avocado-framework-tests/avocado-misc-tests/blob/master/io/disk/ioping.py.data/ioping.yaml)
     Now, it has yaml parameters like mode, count, deadline, period, disk, etc.
     Suppose user wants to change only 3 of those values, say disk, wsize and period, user can have that alone in our input file.
-    Refer [input_example.txt](input_example.txt) for this example.
+    User must specify config key value matching the branch of the yaml through "/" notation (matching yaml_to_mux.parameter_paths).
+    Optinally users can also provide input with '*' as part of config key, if the config key needs to be matched irrespective for multiple branches.
+    Please note that only strings where you want to enforce strictly as string must be enclosed in double-quotes only, like numbers, expressions, lists, etc. Normal strings need not be enclosed in double-quotes.
+    Example:
+    "1", if 1 needs to be strictly read as string
+    1, if 1 needs to be read as integer
+    Refer [input_example.txt](input_example.txt) for details.
 
 
 5. `--verbose`:
