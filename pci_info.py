@@ -102,15 +102,15 @@ if __name__ == '__main__':
     parser.add_argument('--pci-address', dest='pci_addr',
                         action='store', default='',
                         help='pci address, comma separated')
-    parser.add_argument('--pci-address-blacklist', dest='pci_addr_blacklist',
+    parser.add_argument('--pci-address-blocklist', dest='pci_addr_blocklist',
                         action='store', default='',
                         help='pci address which need not be considered, comma separated')
     parser.add_argument('--type', dest='pci_type',
                         action='store', default='All',
                         help='type of adapters, comma separated')
-    parser.add_argument('--type-blacklist', dest='type_blacklist',
+    parser.add_argument('--type-blocklist', dest='type_blocklist',
                         action='store', default='',
-                        help='type of adapters to blacklist, comma separated')
+                        help='type of adapters to blocklist, comma separated')
     parser.add_argument('--show-info', dest='show_info',
                         action='store_true', default=False,
                         help='Show the pci details')
@@ -125,9 +125,9 @@ if __name__ == '__main__':
                         help='Additional parameters(key=value) to the input file, space separated')
     args = parser.parse_args()
     if args.pci_addr:
-        pci_details = pci.pci_info(args.pci_addr, pci_type=args.pci_type, pci_blacklist=args.pci_addr_blacklist, type_blacklist=args.type_blacklist)
+        pci_details = pci.pci_info(args.pci_addr, pci_type=args.pci_type, pci_blocklist=args.pci_addr_blocklist, type_blocklist=args.type_blocklist)
     else:
-        pci_details = pci.all_pci_info(pci_type=args.pci_type, pci_blacklist=args.pci_addr_blacklist, type_blacklist=args.type_blacklist)
+        pci_details = pci.all_pci_info(pci_type=args.pci_type, pci_blocklist=args.pci_addr_blocklist, type_blocklist=args.type_blocklist)
     if not pci_details:
         logger.info("No PCI Found")
         sys.exit(0)
