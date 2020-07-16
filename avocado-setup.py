@@ -26,7 +26,6 @@ import configparser
 import binascii
 from shutil import copyfile
 
-from lib.logger import logger_init
 from lib import helper
 
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
@@ -47,7 +46,6 @@ TEST_REPOS = CONFIGFILE.get('repo', 'tests').split(',')
 TEST_DIR = "%s/tests" % BASE_PATH
 DATA_DIR = "%s/data" % BASE_PATH
 LOG_DIR = "%s/results" % BASE_PATH
-logger = logger_init(filepath=BASE_PATH).getlogger()
 prescript_dir = CONFIGFILE.get('script-dir', 'prescriptdir')
 postscript_dir = CONFIGFILE.get('script-dir', 'postscriptdir')
 
@@ -97,9 +95,8 @@ class TestSuite():
             os.system(cmd)
             self.conf = cfg
         elif self.type == 'host':
-            local_cfg = "%s/%s/%s.cfg" % (TEST_CONF_PATH,
-                                          self.type,
-                                          self.shortname)
+            local_cfg = "%s/%s.cfg" % (TEST_CONF_PATH,
+                                          self.conf.replace('_', '/', 1))
             if not os.path.isfile(local_cfg):
                 return self.conf
             self.conf = local_cfg
@@ -271,6 +268,7 @@ def install_optional_plugin(plugin):
         pass
 
 
+
 def create_config(logdir):
     """
     Create the local avocado config file
@@ -364,7 +362,6 @@ def bootstrap(enable_kvm=False):
                 os.makedirs(postscript_dir)
             helper.copy_dir_file(postscript, postscript_dir)
 
-
 def run_test(testsuite, avocado_bin):
     """
     To run given testsuite
@@ -418,6 +415,26 @@ def run_test(testsuite, avocado_bin):
     return
 
 
+def log_files(test_list, log_dir):
+    """
+    Log the test config files, input file, norun config files, command line.
+    """
+    with open(os.path.join(log_dir, "command.txt"), "w") as fp:
+        fp.write(" ".join(sys.argv))
+        fp.write("\n")
+
+    no_run_tests = os.path.join(log_dir, "no_run_tests")
+    helper.copy_file(NORUNTEST_PATH, no_run_tests)
+
+    config_path = os.path.join(log_dir, "test_configs")
+    for test in test_list:
+        helper.copy_file(Testsuites[test].config(), config_path)
+
+    if args.inputfile:
+        input_file = os.path.join(log_dir, "input_file")
+        helper.copy_file(args.inputfile, input_file)
+
+
 def env_clean():
     """
     Clean/uninstall avocado and autotest
@@ -432,7 +449,6 @@ def env_clean():
 
     if os.path.isdir(postscript):
         helper.remove_file(postscript, postscript_dir)
-
 
 def edit_mux_file(test_config_name, mux_file_path, tmp_mux_path):
     """
@@ -626,6 +642,21 @@ if __name__ == '__main__':
                         default=False, help='enable bootstrap kvm tests')
 
     args = parser.parse_args()
+
+    if args.outputdir:
+        # Check if it is valid path
+        if not os.path.isdir(os.path.abspath(args.outputdir)):
+            raise ValueError("No output dir")
+        outputdir = args.outputdir
+    else:
+        outputdir = BASE_PATH
+    outputdir = os.path.join(outputdir, "results")
+    timeObj = time.localtime(time.time())
+    log_dir = os.path.join(outputdir, "%d-%d-%d_%d_%d_%d" % (timeObj.tm_mday, timeObj.tm_mon, timeObj.tm_year,
+                                                             timeObj.tm_hour, timeObj.tm_min, timeObj.tm_sec))
+    os.makedirs(log_dir)
+    logger = helper.get_logger(log_dir)
+
     if helper.get_machine_type() == 'pHyp':
         args.enable_kvm = False
         if args.run_suite:
@@ -643,13 +674,6 @@ if __name__ == '__main__':
     additional_args = args.add_args
     if args.verbose:
         additional_args += ' --show-job-log'
-    if args.outputdir:
-        # Check if it valid path
-        if not os.path.isdir(os.path.abspath(args.outputdir)):
-            raise ValueError("No output dir")
-        outputdir = os.path.join(args.outputdir, 'results')
-    else:
-        outputdir = os.path.join(BASE_PATH, 'results')
 
     additional_args += ' --job-results-dir %s' % outputdir
     bootstraped = False
@@ -724,6 +748,7 @@ if __name__ == '__main__':
                                                             outputdir, args.vt_type,
                                                             test['test'], test['mux'],
                                                             test['args'])
+                    Testsuites[test_suite_name].conf = test_suite
                     Testsuites_list.append(test_suite_name)
 
             if 'guest' in test_suite:
@@ -735,6 +760,10 @@ if __name__ == '__main__':
                     Testsuites[test_suite].runstatus("Cant_Run",
                                                      "Config file not present")
                     continue
+
+        # Log config files
+        log_files(Testsuites_list, log_dir)
+
         # Run Tests
         for test_suite in Testsuites_list:
             if not Testsuites[test_suite].run == "Cant_Run":
@@ -762,7 +791,9 @@ if __name__ == '__main__':
                                                 Testsuites[test_suite].run.ljust(10),
                                                 Testsuites[test_suite].runsummary))
             summary_output.append(Testsuites[test_suite].runlink)
+        summary_output.append("")
         logger.info("\n".join(summary_output))
+        logger.info("Results and Configs logged at: %s" % log_dir)
 
     if os.path.isdir("/tmp/mux/"):
         logger.info("Removing temporary mux dir")
