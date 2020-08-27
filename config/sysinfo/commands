@@ -6,9 +6,8 @@ gcc --version
 ld --version
 hostname
 uptime
-dmidecode
-ifconfig -a
-brctl show
+ip a
+ip -d link show 
 ip link
 numactl --hardware show
 lscpu
