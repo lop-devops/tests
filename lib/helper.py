@@ -89,18 +89,24 @@ def get_dist():
 
 def get_machine_type():
     """
-    Return What kind of machine example: pHyp/PowerNV
+    Return What kind of machine example: pHypLpar/PowerNV/qemu
     """
     machine_type = None
     cpuinfo = '/proc/cpuinfo'
-    if os.path.isfile(cpuinfo):
-        fd = open(cpuinfo, 'r')
+    if not os.path.isfile(cpuinfo):
+        return machine_type
+    with open(cpuinfo, 'r') as fd:
         for line in fd.readlines():
-            if 'PowerNV' in line:
-                machine_type = 'NV'
-            elif 'pSeries' in line:
-                machine_type = 'pHyp'
-        fd.close()
+            if line.startswith("machine"):
+                if 'PowerNV' in line:
+                    machine_type = 'NV'
+                    break
+                elif 'pSeries' in line:
+                    if 'qemu' in line:
+                        machine_type = 'qemu'
+                    else:
+                        machine_type = 'pHyp'
+                    break
     return machine_type
 
 
