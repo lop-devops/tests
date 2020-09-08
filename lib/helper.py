@@ -139,7 +139,7 @@ def get_install_cmd():
     """
     Get the command to install, based on the distro
     """
-    (dist, dist_ver) = get_dist()
+    (dist, _) = get_dist()
     if 'ubuntu' in dist:
         cmd = "echo y | apt-get install"
     elif 'sles' in dist:
@@ -188,3 +188,47 @@ def remove_file(src, dest):
         if os.path.exists(d_file):
             os.remove(d_file)
         logger.debug("%s file deleted" % d_file)
+
+
+class PipMagager:
+    def __init__(self, base_fw=[], opt_fw=[], kvm_fw=[], enable_kvm=False):
+        """
+        helper class to parse, install, uninstall pip package from user config
+        """
+        self.uninstallitems = base_fw + opt_fw + kvm_fw
+        if enable_kvm:
+            self.installitems = self.uninstallitems
+        else:
+            self.installitems = base_fw + opt_fw
+
+        self.install_packages = []
+        self.uninstall_packages = []
+        self.pip_cmd = "pip%s" % sys.version_info[0]
+        for item in self.uninstallitems:
+            self.uninstall_packages.append(item[0])
+        for item in self.installitems:
+            if item[1]:
+                if item[1].startswith('git'):
+                    self.install_packages.append(item[1])
+                else:
+                    self.install_packages.append("%s==%s" % (item[0], item[1]))
+            else:
+                self.install_packages.append(item[0])
+
+    def install(self):
+        if os.geteuid() != 0:
+            pip_installcmd = '%s install --user -U' % self.pip_cmd
+        else:
+            pip_installcmd = '%s install -U' % self.pip_cmd
+        for package in self.install_packages:
+            cmd = '%s %s' % (pip_installcmd, package)
+            runcmd(cmd,
+                   err_str='Package installation via pip failed: package  %s' % package,
+                   debug_str='Installing python package %s using pip' % package)
+
+    def uninstall(self):
+        for package in self.uninstall_packages:
+            cmd = "%s uninstall %s -y --disable-pip-version-check" % (self.pip_cmd, package)
+            runcmd(cmd, ignore_status=True,
+                   err_str="Error in removing package: %s" % package,
+                   debug_str="Uninstalling %s" % package)
