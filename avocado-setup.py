@@ -24,26 +24,27 @@ import shlex
 import argparse
 import configparser
 import binascii
-from shutil import copyfile
 
 from lib.logger import logger_init
 from lib import helper
 
+AVOCADO_CONFIG_DIR = "%s/.config/avocado" % os.environ['HOME']
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = "%s/config/wrapper/env.conf" % BASE_PATH
 prescript = "%s/config/prescript" % BASE_PATH
 postscript = "%s/config/postscript" % BASE_PATH
 NORUNTEST_PATH = "%s/config/wrapper/no_run_tests.conf" % BASE_PATH
 TEST_CONF_PATH = "%s/config/tests/" % BASE_PATH
-CONFIGFILE = configparser.SafeConfigParser()
+CONFIGFILE = configparser.ConfigParser()
 CONFIGFILE.read(CONFIG_PATH)
-NORUNTESTFILE = configparser.SafeConfigParser()
+NORUNTESTFILE = configparser.ConfigParser()
 NORUNTESTFILE.read(NORUNTEST_PATH)
-INPUTFILE = configparser.SafeConfigParser()
+INPUTFILE = configparser.ConfigParser()
 INPUTFILE.optionxform = str
-AVOCADO_REPO = CONFIGFILE.get('repo', 'avocado')
-AVOCADO_VT_REPO = CONFIGFILE.get('repo', 'avocado_vt')
-TEST_REPOS = CONFIGFILE.get('repo', 'tests').split(',')
+BASE_FRAMEWORK = eval(CONFIGFILE.get('framework', 'base'))
+KVM_FRAMEWORK = eval(CONFIGFILE.get('framework', 'kvm'))
+OPTIONAL_FRAMEWORK = eval(CONFIGFILE.get('framework', 'optional'))
+TEST_REPOS = eval(CONFIGFILE.get('tests', 'name'))
 TEST_DIR = "%s/tests" % BASE_PATH
 DATA_DIR = "%s/data" % BASE_PATH
 LOG_DIR = "%s/results" % BASE_PATH
@@ -53,11 +54,14 @@ postscript_dir = CONFIGFILE.get('script-dir', 'postscriptdir')
 
 
 class TestSuite():
+    """
+        Class for Testsuite
+    """
     guest_add_args = ""
     host_add_args = ""
 
     def __init__(self, name, resultdir, vt_type, test=None, mux=None, args=None):
-        self.id = binascii.b2a_hex(os.urandom(20)).decode()
+        self.jobid = binascii.b2a_hex(os.urandom(20)).decode()
         self.name = str(name)
         self.shortname = "_".join(self.name.split('_')[1:])
         self.job_dir = None
@@ -76,7 +80,7 @@ class TestSuite():
             self.vt_type = None
 
     def jobdir(self):
-        cmd = 'grep %s %s/*/id|grep job-' % (self.id, self.resultdir)
+        cmd = 'grep %s %s/*/id|grep job-' % (self.jobid, self.resultdir)
         status, self.job_dir = helper.runcmd(cmd, ignore_status=True)
         if status != 0:
             return ''
@@ -111,31 +115,11 @@ class TestSuite():
         self.runlink = link
 
 
-def pip_install():
-    """
-    install package using pip
-    """
-    logger.info("install packages via pip interface")
-
-    pip_cmd = 'pip%s' % sys.version_info[0]
-
-    if CONFIGFILE.has_section('pip-package'):
-        package = CONFIGFILE.get('pip-package', 'package').split(',')
-        for dep in package:
-            cmd = '%s install %s' % (pip_cmd, dep)
-            helper.runcmd(cmd, err_str='Package installation via pip failed: package  %s' % dep,
-                          debug_str='Installing python package %s using pip' % dep)
-
-
 def env_check(enable_kvm):
     """
     Check if the environment is proper
     """
     logger.info("Check for environment")
-    # create a folder to store all edited multiplexer files
-    if not os.path.isdir("/tmp/mux/"):
-        logger.info("Creating temporary mux dir")
-        os.makedirs("/tmp/mux/")
     not_found = []
     (env_ver, env_type, cmd_pat) = helper.get_env_type(enable_kvm)
     # try to check base packages using major version numbers
@@ -164,12 +148,7 @@ def env_check(enable_kvm):
         if helper.runcmd(cmd_pat % dep, ignore_status=True)[0] != 0:
             not_found.append(dep)
     if not_found:
-        if args.no_deps_check:
-            logger.warning(
-                "No dependancy check flag is set, proceeding with bootstrap")
-            logger.info("Please install following "
-                        "dependancy packages %s", " ".join(not_found))
-        elif args.install_deps:
+        if args.install_deps:
             logger.warning("Installing missing packages %s", " ".join(not_found))
             if helper.install_packages(not_found):
                 logger.error("Some packages not installed")
@@ -188,8 +167,7 @@ def is_avocado_plugin_avl(plugin):
     if helper.runcmd(cmd, ignore_status=True)[0] != 0:
         logger.warning("Avocado %s plugin not installed", plugin)
         return False
-    else:
-        return True
+    return True
 
 
 def need_bootstrap(enable_kvm=False):
@@ -198,43 +176,31 @@ def need_bootstrap(enable_kvm=False):
     :return: True if bootstrap is needed
     """
     logger.debug("Check if bootstrap required")
-    needsBootstrap = False
+    needs_bootstrap = False
     # Check for avocado
     if 'no avocado ' in helper.get_avocado_bin(ignore_status=True):
         logger.debug("Avocado needs to be installed")
-        needsBootstrap = True
+        needs_bootstrap = True
     if enable_kvm:
         # Check for avocado-vt
         for plugin in ['vt', 'vt-list', 'vt-bootstrap']:
             if not is_avocado_plugin_avl(plugin):
                 logger.debug("Avocado %s plugin needs to installed", plugin)
-                needsBootstrap = True
+                needs_bootstrap = True
     # Check for avocado-tests
     for repo in TEST_REPOS:
         repo_name = repo.split('/')[-1].split('.')[0]
         if not os.path.isdir(os.path.join(TEST_DIR, repo_name)):
             logger.debug("Test needs to be downloaded/updated")
-            needsBootstrap = True
-    return needsBootstrap
+            needs_bootstrap = True
+    return needs_bootstrap
 
 
-def install_repo(path, name):
-    """
-    Install the given repo
-    :param repo: repository path
-    :param name: name of the repository
-    """
-    cmd = "cd %s;make requirements;make requirements-selftests;python setup.py install" % path
-    helper.runcmd(cmd, info_str="Installing %s from %s" % (name, path),
-                  err_str="Failed to install %s repository:" % name)
-
-
-def get_repo(repo, basepath, install=False):
+def get_repo(repo, basepath):
     """
     To get given repo cloned/updated and install
     :param repo: repo link
     :param basepath: base path where the repository has to be downloaded
-    :param install: To enable the flag to install the repo
     """
     repo_name = repo.split('/')[-1].split('.')[0]
     repo_path = os.path.join(basepath, repo_name)
@@ -243,32 +209,13 @@ def get_repo(repo, basepath, install=False):
     if os.path.isdir(repo_path):
         cmd = "cd %s;git pull --no-edit" % repo_path
         helper.runcmd(cmd,
-                      info_str="Updating the repo: %s in %s" % (repo_name, repo_path),
+                      info_str="\t3. Updating the repo: %s in %s" % (repo_name, repo_path),
                       err_str="Failed to update %s repository:" % repo_name)
     else:
         cmd = "cd %s;git clone %s %s" % (basepath, repo, repo_name)
         helper.runcmd(cmd,
-                      info_str="Cloning the repo: %s in %s" % (repo_name, repo_path),
+                      info_str="\t3. Cloning the repo: %s in %s" % (repo_name, repo_path),
                       err_str="Failed to clone %s repository:" % repo_name)
-    if install:
-        install_repo(repo_path, repo_name)
-
-
-def install_optional_plugin(plugin):
-    """
-    To install optional avocado plugin
-    :param plugin: optional plugin name
-    """
-    if not is_avocado_plugin_avl(plugin):
-        plugin_path = "%s/avocado/optional_plugins/%s" % (BASE_PATH, plugin)
-        if os.path.isdir(plugin_path):
-            cmd = "cd %s;python setup.py install" % plugin_path
-            helper.runcmd(cmd, ignore_status=True,
-                          err_str="Error installing optional plugin: %s" % plugin,
-                          info_str="Installing optional plugin: %s" % plugin)
-    else:
-        # plugin already installed
-        pass
 
 
 def create_config(logdir):
@@ -276,10 +223,10 @@ def create_config(logdir):
     Create the local avocado config file
     :param logdir: Log directory
     """
-    logger.info("Creating Avocado Config")
+    logger.info("\t1. Creating Avocado Config")
     config = configparser.ConfigParser()
-    os.system("mkdir -p ~/.config/avocado")
-    avocado_conf = '%s/.config/avocado/avocado.conf' % os.environ['HOME']
+    os.makedirs(AVOCADO_CONFIG_DIR, exist_ok=True)
+    avocado_conf = os.path.join(AVOCADO_CONFIG_DIR, "avocado.conf")
     config.add_section('datadir.paths')
     config.set('datadir.paths', 'base_dir', BASE_PATH)
     config.set('datadir.paths', 'test_dir', TEST_DIR)
@@ -316,37 +263,56 @@ def guest_download(guestos):
     cmd = '%s vt-bootstrap --vt-guest-os %s --yes-to-all' % (avocado_bin,
                                                              guestos)
     helper.runcmd(cmd, err_str="Failed to Download Guest OS. Error:",
-                  info_str="Downloading the guest os image")
+                  info_str="Downloading the guest OS(%s) image" % guestos)
 
 
-def kvm_bootstrap():
+def kvm_bootstrap(guest_os):
     """
     Prepare KVM Test environment
     """
-    get_repo(AVOCADO_VT_REPO, BASE_PATH, True)
     avocado_bin = helper.get_avocado_bin()
     libvirt_cmd = '%s vt-bootstrap --vt-type libvirt \
                   --vt-update-providers --vt-skip-verify-download-assets \
                   --yes-to-all' % avocado_bin
     helper.runcmd(libvirt_cmd, err_str="Failed to bootstrap vt libvirt. Error:",
-                  info_str="Bootstrapping vt libvirt")
+                  info_str="\t\ti) Bootstrapping VT libvirt")
     qemu_cmd = '%s vt-bootstrap --vt-type qemu --vt-update-providers \
                --vt-skip-verify-download-assets --yes-to-all' % avocado_bin
     helper.runcmd(qemu_cmd, err_str="Failed to bootstrap vt qemu. Error:",
-                  info_str="Bootstrapping vt qemu")
+                  info_str="\t\tii) Bootstrapping VT qemu")
+    if guest_os:
+        guestos_cmd = '%s vt-bootstrap --vt-guest-os %s --yes-to-all' % (avocado_bin,
+                                                                         guest_os)
+        helper.runcmd(guestos_cmd, err_str="Failed to Download Guest OS. Error:",
+                      info_str="\t\tiii) Downloading guest OS(%s) image" % guest_os)
 
 
-def bootstrap(enable_kvm=False):
+def bootstrap(enable_kvm=False, guest_os=None):
     """
     Prepare the environment for execution
 
     :params enable_kvm: Flag to enable kvm environment bootstrap
     """
     env_clean()
-    logger.info("Bootstrapping Avocado")
-    get_repo(AVOCADO_REPO, BASE_PATH, True)
+    logger.info("Bootstrapping Framework")
+    create_config(outputdir)
     if enable_kvm:
-        kvm_bootstrap()
+        install_str = "\t2. Installing Avocado and Avocado-VT(KVM) Framework"
+    else:
+        install_str = "\t2. Installing Avocado Framework"
+    logger.info(install_str)
+    pipManager.install()
+    if enable_kvm:
+        logger.info("\t2a.Bootstrapping Avocado-VT(KVM) Framework")
+        # Copy if any isos present in the local folder
+        dst_iso_path = "%s/avocado-vt/isos/linux/" % DATA_DIR
+        os.makedirs(dst_iso_path, exist_ok=True)
+        for fle in os.listdir("%s/isos" % BASE_PATH):
+            if fle.endswith(".iso"):
+                file_path = os.path.join(BASE_PATH, 'isos', fle)
+                dst_file = os.path.join(dst_iso_path, fle)
+                shutil.copyfile(file_path, dst_file)
+        kvm_bootstrap(guest_os)
     helper.runcmd('mkdir -p %s' % TEST_DIR,
                   debug_str="Creating test repo dir %s" % TEST_DIR,
                   err_str="Failed to create test repo dir. Error: ")
@@ -380,13 +346,13 @@ def run_test(testsuite, avocado_bin):
         cmd = "%s run --vt-type %s --vt-config %s \
                 --force-job-id %s %s" % (avocado_bin, testsuite.vt_type,
                                          testsuite.config(),
-                                         testsuite.id, guest_args)
+                                         testsuite.jobid, guest_args)
     if 'host' in testsuite.type:
         logger.info("Running Host Tests Suite %s", testsuite.shortname)
         cmd = "%s run %s" % (avocado_bin, testsuite.test)
         if testsuite.mux:
             cmd += " -m %s" % os.path.join(TEST_DIR, testsuite.mux)
-        cmd += " --force-job-id %s %s" % (testsuite.id, TestSuite.host_add_args)
+        cmd += " --force-job-id %s %s" % (testsuite.jobid, TestSuite.host_add_args)
         if testsuite.args:
             cmd += testsuite.args
 
@@ -407,8 +373,8 @@ def run_test(testsuite, avocado_bin):
     if result_link:
         result_json = result_link + "/results.json"
         result_link += "/job.log\n"
-        with open(result_json, encoding="utf-8") as fp:
-            result_state = json.load(fp)
+        with open(result_json, encoding="utf-8") as filep:
+            result_state = json.load(filep)
         for state in ['pass', 'cancel', 'errors', 'failures', 'skip', 'warn', 'interrupt']:
             if state in result_state.keys():
                 result_link += "| %s %s |" % (state.upper(), str(result_state[state]))
@@ -418,20 +384,27 @@ def run_test(testsuite, avocado_bin):
     return
 
 
-def env_clean():
+def env_clean(deep=False):
     """
     Clean/uninstall avocado and autotest
     """
-    for package in ['avocado', 'avocado_plugins_vt', 'autotest']:
-        cmd = "pip uninstall %s -y --disable-pip-version-check" % package
-        helper.runcmd(cmd, ignore_status=True,
-                      err_str="Error in removing package: %s" % package,
-                      debug_str="Uninstalling %s" % package)
+    logger.info("Cleaning the Environment")
+    pipManager.uninstall()
     if os.path.isdir(prescript):
         helper.remove_file(prescript, prescript_dir)
 
     if os.path.isdir(postscript):
         helper.remove_file(postscript, postscript_dir)
+    if deep:
+        # Remove Data dir if present
+        if os.path.isdir(DATA_DIR):
+            shutil.rmtree(DATA_DIR)
+        # Remove local avocado config if present
+        if os.path.isdir(AVOCADO_CONFIG_DIR):
+            shutil.rmtree(AVOCADO_CONFIG_DIR)
+        # Remove tests folder
+        if os.path.isdir(TEST_DIR):
+            shutil.rmtree(TEST_DIR)
 
 
 def edit_mux_file(test_config_name, mux_file_path, tmp_mux_path):
@@ -476,10 +449,8 @@ def parse_test_config(test_config_file, avocado_bin, enable_kvm):
     test_config_name = test_config_file[test_config_file.find("_") + 1:]
     test_config_file = "%s/%s/%s.cfg" % (TEST_CONF_PATH, test_config_type,
                                          test_config_name)
-    if not os.path.isfile(test_config_file):
-        logger.error("Test Config %s not present", test_config_file)
-    else:
-        (env_ver, env_type, cmdpat) = helper.get_env_type(enable_kvm)
+    if os.path.isfile(test_config_file):
+        (env_ver, env_type, _) = helper.get_env_type(enable_kvm)
         norun_tests = []
         # Get common set of not needed tests
         env = 'norun_%s' % env_type
@@ -492,8 +463,8 @@ def parse_test_config(test_config_file, avocado_bin, enable_kvm):
                 norun_tests.extend(NORUNTESTFILE.get(section, 'tests').split(','))
         norun_tests = list(filter(None, norun_tests))
 
-        with open(test_config_file, 'r') as fp:
-            test_config_contents = fp.read()
+        with open(test_config_file, 'r') as filep:
+            test_config_contents = filep.read()
         test_list = []
         mux_flag = 0
         arg_flag = 0
@@ -534,13 +505,15 @@ def parse_test_config(test_config_file, avocado_bin, enable_kvm):
                 if '.yaml' in line[1]:
                     test_dic['mux'] = line[1]
                     mux_flag = 1
-                    test_dic['name'] = "%s_%s" % (test_dic['name'], test_dic['mux'].split("/")[-1].split(".")[0])
+                    test_dic['name'] = "%s_%s" % (test_dic['name'],
+                                                  test_dic['mux'].split("/")[-1].split(".")[0])
                     if args.inputfile:
                         mux_file = os.path.join(TEST_DIR, test_dic['mux'])
                         if not os.path.isfile(mux_file):
                             logger.debug("%s does not exist", mux_file)
                             continue
-                        tmp_mux_path = os.path.join('/tmp/mux/', "%s_%s.yaml" % (test_config_name, test_dic['name']))
+                        tmp_mux_path = os.path.join('/tmp/mux/', "%s_%s.yaml" % (test_config_name,
+                                                                                 test_dic['name']))
                         edit_mux_file(test_config_name, mux_file, tmp_mux_path)
                         test_dic['mux'] = tmp_mux_path
                 # Handling additional args from second param
@@ -565,8 +538,9 @@ def parse_test_config(test_config_file, avocado_bin, enable_kvm):
             for test in test_list:
                 single_test_dic['test'] += " %s" % test['test']
             return [single_test_dic]
-
         return test_list
+    logger.error("Test Config %s not present", test_config_file)
+    return []
 
 
 if __name__ == '__main__':
@@ -618,7 +592,8 @@ if __name__ == '__main__':
                         help='To force wrapper not to check for dependancy packages')
     parser.add_argument('--install-deps', dest="install_deps",
                         action='store_true', default=False,
-                        help="To force wrapper to install dependancy packages (Only for Ubuntu, SLES and yum based OS)")
+                        help="To force wrapper to install dependancy packages "
+                             "(Only for Ubuntu, SLES and yum based OS)")
     parser.add_argument('--clean', dest="clean",
                         action='store_true', default=False,
                         help='To remove/uninstall autotest, avocado from system')
@@ -639,8 +614,16 @@ if __name__ == '__main__':
                 logger.warning("Overriding user setting and enabling kvm bootstrap "
                                "as guest tests are requested")
                 args.enable_kvm = True
-    env_check(args.enable_kvm)
-    additional_args = args.add_args
+    pipManager = helper.PipMagager(BASE_FRAMEWORK, OPTIONAL_FRAMEWORK,
+                                   KVM_FRAMEWORK, args.enable_kvm)
+    if not (args.run_suite and args.install_deps
+            and args.bootstrap and args.install) and args.clean:
+        # honor the spl condition, just to deep clean the environment incase needed
+        env_clean(deep=True)
+        sys.exit(0)
+    if not args.no_deps_check:
+        env_check(args.enable_kvm)
+    additional_args = " %s" % args.add_args
     if args.verbose:
         additional_args += ' --show-job-log'
     if args.outputdir:
@@ -654,24 +637,11 @@ if __name__ == '__main__':
     additional_args += ' --job-results-dir %s' % outputdir
     bootstraped = False
     if (args.bootstrap or need_bootstrap(args.enable_kvm)):
-        create_config(outputdir)
-        bootstrap(args.enable_kvm)
+        if not args.no_guest_download and args.enable_kvm:
+            bootstrap(args.enable_kvm, args.guest_os)
+        else:
+            bootstrap(args.enable_kvm)
         bootstraped = True
-        if args.guest_os and not args.no_guest_download and args.enable_kvm:
-            guest_download(args.guest_os)
-        # Install optional plugins from config file
-        plugins = CONFIGFILE.get('plugins', 'optional').split(',')
-        for plugin in plugins:
-            install_optional_plugin(plugin)
-        # Copy if any isos present in the local folder
-        dst_iso_path = "%s/avocado-vt/isos/linux/" % DATA_DIR
-        if not os.path.isdir(dst_iso_path):
-            os.system('mkdir -p %s' % dst_iso_path)
-        for fle in os.listdir("%s/isos" % BASE_PATH):
-            if fle.endswith(".iso"):
-                file_path = os.path.join(BASE_PATH, 'isos', fle)
-                dst_file = os.path.join(dst_iso_path, fle)
-                copyfile(file_path, dst_file)
 
     if args.inputfile:
         if not os.path.isfile(args.inputfile):
@@ -679,6 +649,10 @@ if __name__ == '__main__':
             args.inputfile = None
 
     if args.run_suite:
+        # create a folder to store all edited multiplexer files
+        if not os.path.isdir("/tmp/mux/"):
+            logger.info("Creating temporary mux dir")
+            os.makedirs("/tmp/mux/")
         if "guest_" in args.run_suite:
             # Make sure we download guest image once
             if not args.no_guest_download and not bootstraped:
@@ -709,7 +683,7 @@ if __name__ == '__main__':
         for test_suite in test_suites:
             if 'host' in test_suite:
                 test_list = parse_test_config(test_suite, avocado_bin, args.enable_kvm)
-                if test_list is None:
+                if not test_list:
                     Testsuites[test_suite] = TestSuite(test_suite, outputdir,
                                                        args.vt_type)
                     Testsuites[test_suite].runstatus("Cant_Run",
@@ -749,16 +723,18 @@ if __name__ == '__main__':
             if Testsuites[test_suite].runlink:
                 test_name_list.extend(Testsuites[test_suite].runlink.split('\n'))
         if test_name_list:
-            longest_name_length = len((sorted(test_name_list, key=len)[-1])) + 5
+            lg_name_len = len((sorted(test_name_list, key=len)[-1])) + 5
         else:
-            longest_name_length = 10
+            lg_name_len = 10
 
         # List the final output
-        summary_output = ["Summary of test results can be found below:\n%s %s %s" % ('TestSuite'.ljust(longest_name_length),
-                                                                                     'TestRun'.ljust(10), 'Summary')]
+        output_str = "Summary of test results can be found below:"
+        output_str += "\n%s %s %s" % ('TestSuite'.ljust(lg_name_len),
+                                      'TestRun'.ljust(10), 'Summary')
+        summary_output = [output_str]
         for test_suite in Testsuites_list:
             summary_output.append(' ')
-            summary_output.append('%s %s %s' % (Testsuites[test_suite].name.ljust(longest_name_length),
+            summary_output.append('%s %s %s' % (Testsuites[test_suite].name.ljust(lg_name_len),
                                                 Testsuites[test_suite].run.ljust(10),
                                                 Testsuites[test_suite].runsummary))
             summary_output.append(Testsuites[test_suite].runlink)

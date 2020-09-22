@@ -227,7 +227,9 @@ $ ./avocado-setup.py -h
     > Force wrapper to skip check for dependancy packages.  This helps to save time when re-running tests on a system where prereqs have already been checked once.
 
 14. `--clean`:
-    > Remove/Uninstall autotest and avocado from system after test completion.
+    > Remove/Uninstall autotest and avocado from system after test completion.<br>
+    >
+    > USE IT WITH CAUTION: When this option used alone(i.e ./avocado-setup.py --clean), this will remove even the avocado config and data directory(includes guest images) and tests directoty.
 
 15. `--enable-kvm`:
     > By default kvm(guest VM) tests environment is not bootstrapped, enable this flag to bootstrap KVM (guest VM) tests.
