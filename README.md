@@ -171,6 +171,7 @@ $ ./avocado-setup.py -h
     Now, it has yaml parameters like mode, count, deadline, period, disk, etc.
     Suppose user wants to change only 3 of those values, say disk, wsize and period, user can have that alone in our input file.
     Refer [input_example.txt](input_example.txt) for this example.
+    Input file templates for host tests can be found at [_inputs_](config/inputs)
 
 
 5. `--verbose`:
