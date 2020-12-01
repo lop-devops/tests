@@ -1,0 +1,21 @@
+[io_nvme_fvt]
+device = "nvme0"
+disk = "/dev/nvme0n1"
+disks = "/dev/nvme0n1 /dev/nvme0n2 /dev/nvme0n3 /dev/nvme0n4"
+lv_disks = "/dev/nvme0n1"
+htx_disks = "/dev/nvme0n1"
+namespace = 1
+firmware_url = ""
+utilization = "100"
+pci_device = ""
+pci_devices = ""
+ONLY_IO = True
+ITERATIONS = 20
+module = "nvme"
+only_io = True
+iteration = 20
+max_freeze = 6
+function = 4
+err = 1
+hmc_pwd = 
+hmc_username = 
