@@ -195,6 +195,13 @@ class PipMagager:
         """
         helper class to parse, install, uninstall pip package from user config
         """
+        if sys.version_info[:2] < (3, 6):
+            logger.error("System installed python version(%s) not supported, make sure python3.6 or above is installed to proceed" % sys.version_info[:2])
+            sys.exit(1)
+        self.pip_cmd = "pip%s" % sys.version_info[0]
+        # Check for pip if not attempt install and proceed
+        cmd = "%s --help >/dev/null 2>&1||(curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && python%s ./get-pip.py)" % (self.pip_cmd, sys.version_info[0])
+        runcmd(cmd, err_str='Unable to install pip3')
         self.uninstallitems = base_fw + opt_fw + kvm_fw
         if enable_kvm:
             self.installitems = self.uninstallitems
@@ -203,7 +210,6 @@ class PipMagager:
 
         self.install_packages = []
         self.uninstall_packages = []
-        self.pip_cmd = "pip%s" % sys.version_info[0]
         for item in self.uninstallitems:
             self.uninstall_packages.append(item[0])
         for item in self.installitems:
