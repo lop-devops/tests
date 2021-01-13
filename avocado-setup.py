@@ -199,23 +199,24 @@ def need_bootstrap(enable_kvm=False):
 def get_repo(repo, basepath):
     """
     To get given repo cloned/updated and install
-    :param repo: repo link
+    :param repo: tuple of repo link and branch(optional)
     :param basepath: base path where the repository has to be downloaded
     """
-    repo_name = repo.split('/')[-1].split('.')[0]
-    repo_path = os.path.join(basepath, repo_name)
-    if os.path.isdir(repo_path) and ('-b ' or '--branch ' in repo):
-        shutil.rmtree(repo_path)
-    if os.path.isdir(repo_path):
-        cmd = "cd %s;git pull --no-edit" % repo_path
-        helper.runcmd(cmd,
-                      info_str="\t3. Updating the repo: %s in %s" % (repo_name, repo_path),
-                      err_str="Failed to update %s repository:" % repo_name)
+    if not repo[1]:
+        branch = "master"
     else:
-        cmd = "cd %s;git clone %s %s" % (basepath, repo, repo_name)
-        helper.runcmd(cmd,
-                      info_str="\t3. Cloning the repo: %s in %s" % (repo_name, repo_path),
-                      err_str="Failed to clone %s repository:" % repo_name)
+        branch = repo[1]
+    cmd_update = "b=%s;git reset --hard && git checkout master && git remote update && (git branch|grep $b||(git checkout $b && git switch -c $b))" % branch
+    repo_name = repo[0].split('/')[-1].split('.git')[0]
+    repo_path = os.path.join(basepath, repo_name)
+    cmd_clone = "git clone %s %s" % (repo[0], repo_path)
+    if os.path.isdir(repo_path):
+        cmd = "cd %s && %s" % (repo_path, cmd_update)
+    else:
+        cmd = "%s && cd %s && %s" % (cmd_clone, repo_path, cmd_update)
+    helper.runcmd(cmd,
+                  info_str="\t3. Cloning/Updating the repo: %s with branch %s under %s" % (repo_name, branch, repo_path),
+                  err_str="Failed to clone/update %s repository:" % repo_name)
 
 
 def create_config(logdir):
