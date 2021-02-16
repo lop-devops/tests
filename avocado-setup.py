@@ -189,7 +189,7 @@ def need_bootstrap(enable_kvm=False):
                 needs_bootstrap = True
     # Check for avocado-tests
     for repo in TEST_REPOS:
-        repo_name = repo.split('/')[-1].split('.')[0]
+        repo_name = repo[0].split('/')[-1].split('.')[0]
         if not os.path.isdir(os.path.join(TEST_DIR, repo_name)):
             logger.debug("Test needs to be downloaded/updated")
             needs_bootstrap = True
