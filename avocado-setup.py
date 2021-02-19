@@ -27,6 +27,7 @@ import binascii
 
 from lib.logger import logger_init
 from lib import helper
+from itertools import permutations
 
 AVOCADO_CONFIG_DIR = "%s/.config/avocado" % os.environ['HOME']
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
@@ -454,14 +455,17 @@ def parse_test_config(test_config_file, avocado_bin, enable_kvm):
         (env_ver, env_type, _) = helper.get_env_type(enable_kvm)
         norun_tests = []
         # Get common set of not needed tests
-        env = 'norun_%s' % env_type
-        dist = 'norun_%s' % helper.get_dist()[0]
-        major = 'norun_%s' % env_ver.split('.')[0]
-        minor = 'norun_%s' % env_ver
-        minor_env = 'norun_%s_%s' % (env_ver, env_type)
-        for section in [env, dist, major, minor, minor_env]:
-            if NORUNTESTFILE.has_section(section):
-                norun_tests.extend(NORUNTESTFILE.get(section, 'tests').split(','))
+        dist = helper.get_dist()[0]
+        major = env_ver.split('.')[0]
+        minor = env_ver
+        perm = []
+        env_list = [env_type, dist, major, minor]
+        for length in range(1, len(env_list) + 1):
+            perm.extend(list(permutations(env_list, length)))
+        perm = ['norun_%s' % '_'.join(per) for per in perm]
+        for per in perm:
+            if NORUNTESTFILE.has_section(per):
+                norun_tests.extend(NORUNTESTFILE.get(per, 'tests').split(','))
         norun_tests = list(filter(None, norun_tests))
 
         with open(test_config_file, 'r') as filep:
