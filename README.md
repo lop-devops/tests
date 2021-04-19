@@ -62,7 +62,8 @@ It is highly recommended for users to execute the following command as root when
 ```
 $ ./avocado-setup.py -h
     usage: avocado-setup.py [-h] [--bootstrap] [--run-suite RUN_SUITE]
-                            [--output-dir OUTPUTDIR] [--input-file INPUTFILE]
+                            [--output-dir OUTPUTDIR] [--use-test-dir]
+			    [--input-file INPUTFILE]
                             [--interval-time INTERVAL] [--verbose]
                             [--only-filter ONLY_FILTER] [--no-filter NO_FILTER]
                             [--additional-args ADD_ARGS] [--guest-os GUEST_OS]
@@ -77,6 +78,7 @@ $ ./avocado-setup.py -h
                             Indicate which test suite(s) to run
       --output-dir OUTPUTDIR
                             Specify the custom test results directory
+      --use-test-dir        Use corresponding test-name dir for storing job results
       --input-file INPUTFILE
                             Specify input file for custom mux values for host
                             tests
@@ -158,6 +160,18 @@ $ ./avocado-setup.py -h
     > `./avocado-setup.py --run-suite guest_sanity,host_sanity --output-dir /tmp`
     >
     > NOTE: The avocado-setup.py log will always be generated at /current_run_path/avocado-wrapper.log
+
+4. `--use-test-dir`:
+    >Use this option to store the avocado test results in directories corresponding to the test name.
+    >
+    > Example:
+    >
+    > `./avocado-setup.py --run-suite host_sched` --use-test-dir
+    >
+    > Results directory will contain directories with each test name
+    > /current_path/results/<test_name_1>/<job-dir>/job.log
+    >
+    > NOTE: This option can be used with or without the --output-dir option
 
 4. `--input-file`:
     >Use this option to specify input file for custom mux values for host tests. This is a config file format, with config section indicating the test cfg file name,
