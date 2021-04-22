@@ -60,7 +60,8 @@ class TestSuite():
     guest_add_args = ""
     host_add_args = ""
 
-    def __init__(self, name, resultdir, vt_type, test=None, mux=None, args=None):
+    def __init__(self, name, resultdir, vt_type, test=None, mux=None, args=None,
+                 use_test_dir=False):
         self.jobid = binascii.b2a_hex(os.urandom(20)).decode()
         self.name = str(name)
         self.shortname = "_".join(self.name.split('_')[1:])
@@ -74,6 +75,8 @@ class TestSuite():
         self.run = "Not_Run"
         self.runsummary = None
         self.runlink = None
+        if use_test_dir:
+            self.resultdir = os.path.join(self.resultdir, self.name)
         if self.type == 'guest':
             self.vt_type = vt_type
         else:
@@ -345,15 +348,20 @@ def run_test(testsuite, avocado_bin):
         if "sanity" in testsuite.shortname:
             guest_args = " --vt-only-filter %s " % args.guest_os
         cmd = "%s run --vt-type %s --vt-config %s \
-                --force-job-id %s %s" % (avocado_bin, testsuite.vt_type,
-                                         testsuite.config(),
-                                         testsuite.jobid, guest_args)
+                --force-job-id %s \
+                --job-results-dir %s %s" % (avocado_bin, testsuite.vt_type,
+                                            testsuite.config(),
+                                            testsuite.jobid,
+                                            testsuite.resultdir, guest_args)
     if 'host' in testsuite.type:
         logger.info("Running Host Tests Suite %s", testsuite.shortname)
         cmd = "%s run %s" % (avocado_bin, testsuite.test)
         if testsuite.mux:
             cmd += " -m %s" % os.path.join(TEST_DIR, testsuite.mux)
-        cmd += " --force-job-id %s %s" % (testsuite.jobid, TestSuite.host_add_args)
+        cmd += " --force-job-id %s \
+                 --job-results-dir %s %s" % (testsuite.jobid,
+                                             testsuite.resultdir,
+                                             TestSuite.host_add_args)
         if testsuite.args:
             cmd += testsuite.args
 
@@ -555,6 +563,9 @@ if __name__ == '__main__':
     parser.add_argument('--output-dir', dest='outputdir',
                         action='store', default=None,
                         help='Specify the custom test results directory')
+    parser.add_argument('--use-test-dir', dest='testdir',
+                        action='store_true', default=False,
+                        help='Use corresponding test-name dir for storing job results')
     parser.add_argument('--input-file', dest='inputfile',
                         action='store', default=None,
                         help='Specify input file for custom mux values for host tests')
@@ -635,7 +646,6 @@ if __name__ == '__main__':
     else:
         outputdir = os.path.join(BASE_PATH, 'results')
 
-    additional_args += ' --job-results-dir %s' % outputdir
     bootstraped = False
     if (args.bootstrap or need_bootstrap(args.enable_kvm)):
         if not args.no_guest_download and args.enable_kvm:
@@ -686,7 +696,8 @@ if __name__ == '__main__':
                 test_list = parse_test_config(test_suite, avocado_bin, args.enable_kvm)
                 if not test_list:
                     Testsuites[test_suite] = TestSuite(test_suite, outputdir,
-                                                       args.vt_type)
+                                                       args.vt_type,
+                                                       use_test_dir=args.testdir)
                     Testsuites[test_suite].runstatus("Cant_Run",
                                                      "Config file not present")
                     continue
@@ -698,13 +709,15 @@ if __name__ == '__main__':
                     Testsuites[test_suite_name] = TestSuite(test_suite_name,
                                                             outputdir, args.vt_type,
                                                             test['test'], test['mux'],
-                                                            test['args'])
+                                                            test['args'],
+                                                            use_test_dir=args.testdir)
                     Testsuites_list.append(test_suite_name)
 
             if 'guest' in test_suite:
                 guest_additional_args = ""
                 Testsuites[test_suite] = TestSuite(str(test_suite),
-                                                   outputdir, args.vt_type)
+                                                   outputdir, args.vt_type,
+                                                   use_test_dir=args.testdir)
                 Testsuites_list.append(str(test_suite))
                 if not Testsuites[test_suite].config():
                     Testsuites[test_suite].runstatus("Cant_Run",
