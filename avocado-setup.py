@@ -144,7 +144,8 @@ def env_check(enable_kvm):
     env_deps = []
     # try to check env specific packages
     if CONFIGFILE.has_section('deps_%s_%s' % (env_ver, env_type)):
-        packages = CONFIGFILE.get('deps_%s_%s' % (env_ver, env_type), 'packages')
+        packages = CONFIGFILE.get('deps_%s_%s' %
+                                  (env_ver, env_type), 'packages')
         if packages != '':
             env_deps = packages.split(',')
     for dep in env_deps:
@@ -152,7 +153,8 @@ def env_check(enable_kvm):
             not_found.append(dep)
     if not_found:
         if args.install_deps:
-            logger.warning("Installing missing packages %s", " ".join(not_found))
+            logger.warning("Installing missing packages %s",
+                           " ".join(not_found))
             if helper.install_packages(not_found):
                 logger.error("Some packages not installed")
                 sys.exit(1)
@@ -218,7 +220,8 @@ def get_repo(repo, basepath):
     else:
         cmd = "%s && cd %s && %s" % (cmd_clone, repo_path, cmd_update)
     helper.runcmd(cmd,
-                  info_str="\t3. Cloning/Updating the repo: %s with branch %s under %s" % (repo_name, branch, repo_path),
+                  info_str="\t3. Cloning/Updating the repo: %s with branch %s under %s" % (
+                      repo_name, branch, repo_path),
                   err_str="Failed to clone/update %s repository:" % repo_name)
 
 
@@ -335,12 +338,18 @@ def bootstrap(enable_kvm=False, guest_os=None):
             helper.copy_dir_file(postscript, postscript_dir)
 
 
-def run_test(testsuite, avocado_bin):
+def run_test(testsuite, avocado_bin, nrunner):
     """
     To run given testsuite
     :param testsuite: Testsuite object which has details about the tests
     :param avocado_bin: Executable path of avocado
     """
+
+    if not nrunner:
+        nrunner = '--test-runner runner'
+    else:
+        nrunner = ''
+
     logger.info('')
     if 'guest' in testsuite.type:
         guest_args = TestSuite.guest_add_args
@@ -355,7 +364,7 @@ def run_test(testsuite, avocado_bin):
                                             testsuite.resultdir, guest_args)
     if 'host' in testsuite.type:
         logger.info("Running Host Tests Suite %s", testsuite.shortname)
-        cmd = "%s run %s" % (avocado_bin, testsuite.test)
+        cmd = "%s run %s %s" % (avocado_bin, nrunner, testsuite.test)
         if testsuite.mux:
             cmd += " -m %s" % os.path.join(TEST_DIR, testsuite.mux)
         cmd += " --force-job-id %s \
@@ -386,7 +395,8 @@ def run_test(testsuite, avocado_bin):
             result_state = json.load(filep)
         for state in ['pass', 'cancel', 'errors', 'failures', 'skip', 'warn', 'interrupt']:
             if state in result_state.keys():
-                result_link += "| %s %s |" % (state.upper(), str(result_state[state]))
+                result_link += "| %s %s |" % (state.upper(),
+                                              str(result_state[state]))
         testsuite.runstatus("Run", "Successfully executed", result_link)
     else:
         testsuite.runstatus("Not_Run", "Unable to find job log file")
@@ -442,7 +452,8 @@ def edit_mux_file(test_config_name, mux_file_path, tmp_mux_path):
             mux_key = temp_line[0]
             mux_value = temp_line[1]
             if key == mux_key.strip():
-                line = line.replace('%s' % line.strip(), '%s: %s' % (key, value))
+                line = line.replace('%s' % line.strip(),
+                                    '%s: %s' % (key, value))
         mux_str_edited.append(line)
 
     with open(tmp_mux_path, 'w') as mux_fp:
@@ -469,7 +480,8 @@ def parse_test_config(test_config_file, avocado_bin, enable_kvm):
         minor_env = 'norun_%s_%s' % (env_ver, env_type)
         for section in [env, dist, major, minor, minor_env]:
             if NORUNTESTFILE.has_section(section):
-                norun_tests.extend(NORUNTESTFILE.get(section, 'tests').split(','))
+                norun_tests.extend(NORUNTESTFILE.get(
+                    section, 'tests').split(','))
         norun_tests = list(filter(None, norun_tests))
 
         with open(test_config_file, 'r') as filep:
@@ -611,6 +623,8 @@ if __name__ == '__main__':
                         help='To remove/uninstall autotest, avocado from system')
     parser.add_argument('--enable-kvm', dest="enable_kvm", action='store_true',
                         default=False, help='enable bootstrap kvm tests')
+    parser.add_argument('--nrunner', dest="nrunner", action='store_true',
+                        default=False, help='enable Parallel run')
 
     args = parser.parse_args()
     if helper.get_machine_type() == 'pHyp':
@@ -656,7 +670,8 @@ if __name__ == '__main__':
 
     if args.inputfile:
         if not os.path.isfile(args.inputfile):
-            logger.debug("Input file %s not found. Continuing without input file", args.inputfile)
+            logger.debug(
+                "Input file %s not found. Continuing without input file", args.inputfile)
             args.inputfile = None
 
     if args.run_suite:
@@ -693,7 +708,8 @@ if __name__ == '__main__':
         Testsuites_list = []
         for test_suite in test_suites:
             if 'host' in test_suite:
-                test_list = parse_test_config(test_suite, avocado_bin, args.enable_kvm)
+                test_list = parse_test_config(
+                    test_suite, avocado_bin, args.enable_kvm)
                 if not test_list:
                     Testsuites[test_suite] = TestSuite(test_suite, outputdir,
                                                        args.vt_type,
@@ -726,7 +742,7 @@ if __name__ == '__main__':
         # Run Tests
         for test_suite in Testsuites_list:
             if not Testsuites[test_suite].run == "Cant_Run":
-                run_test(Testsuites[test_suite], avocado_bin)
+                run_test(Testsuites[test_suite], avocado_bin, args.nrunner)
                 if args.interval:
                     time.sleep(int(args.interval))
 
@@ -735,7 +751,8 @@ if __name__ == '__main__':
         for test_suite in Testsuites_list:
             test_name_list.append(Testsuites[test_suite].name)
             if Testsuites[test_suite].runlink:
-                test_name_list.extend(Testsuites[test_suite].runlink.split('\n'))
+                test_name_list.extend(
+                    Testsuites[test_suite].runlink.split('\n'))
         if test_name_list:
             lg_name_len = len((sorted(test_name_list, key=len)[-1])) + 5
         else:
@@ -749,7 +766,8 @@ if __name__ == '__main__':
         for test_suite in Testsuites_list:
             summary_output.append(' ')
             summary_output.append('%s %s %s' % (Testsuites[test_suite].name.ljust(lg_name_len),
-                                                Testsuites[test_suite].run.ljust(10),
+                                                Testsuites[test_suite].run.ljust(
+                                                    10),
                                                 Testsuites[test_suite].runsummary))
             summary_output.append(Testsuites[test_suite].runlink)
         logger.info("\n".join(summary_output))
