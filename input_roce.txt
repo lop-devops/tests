@@ -1,0 +1,60 @@
+[io_roce_fvt]
+hmc_ip = ""
+hmc_pwd = "" 
+hmc_username = ""
+lpar = ""
+server = ""
+host_ip = ""
+netmask = ""
+peer_ip = ""
+interface = ""
+host_interfaces = "enp1s0d1 enp1s0"
+bond_interfaces = "enp1s0d1 enp1s0" 
+peer_interfaces = "enp1s0d1 enp1s0"
+bond_name = "bondtest"
+user_name = "root"
+peer_bond_needed = False 
+peer_wait_time = "70"
+sleep_time = "40"
+time_limit = 1
+peer_ips = "140.1.1.58 139.1.1.58"
+host_ips = "140.1.1.48 139.1.1.48"
+peer_user_name = "root"
+TIMEOUT = "600"
+NETSERVER_RUN = 1
+EXPECTED_THROUGHPUT = 900
+duration = 30
+minimum_iterations = 1
+maximum_iterations = 2
+drop_accepted = 10
+UPERF_SERVER_RUN = 1
+IPERF_SERVER_RUN = 1
+ITERATIONS = 10
+MODULES = mlx4_en 
+ONLY_IO = True
+max_freeze = 5
+function = 4
+err = 1
+pci_device = "0000:01:00.0"
+pci_devices = "0000:01:00.0"
+num_of_hotplug = 3
+mdt_file = 'net.mdt'
+host_public_ip =  
+peer_public_ip =  
+peer_password = ""
+peer_user = "root"
+net_ids = "140,139"
+ext_flag: "1"
+CA_NAME: "mlx4_0"
+GID_NUM: "0"
+PORT_NUM: "2"
+PEERCA: "mlx4_0"
+PEERGID: "0"
+PEERPORT: "2"
+peer_ipv6: ""
+dapl_interface: "ofa-v2-enp1s0d1"
+dapl_peer_interface: "ofa-v2-enp1s0d1"
+IPERF_RUN: 0
+iso_location:  
+nping_count: 100
+kernel_compile: "Y"

@@ -28,7 +28,7 @@ ARGUMENT DETAILS:
     If not provided, collects details for all pci addresses in the system.
 
 
-    --pci-address-blacklist PCI_ADDR_BLACKLIST
+    --pci-address-blocklist PCI_ADDR_BLOCKLIST
     Use this option to leave out pci addresses from the list.
     Use comma separated values to provide multiple pci addresses.
 
@@ -39,7 +39,7 @@ ARGUMENT DETAILS:
     If not provided, collects details for all types of adapters in the system.
 
 
-    --type-blacklist TYPE_BLACKLIST
+    --type-blocklist TYPE_BLOCKLIST
     Use this option to leave out adapter types from the list.
     Use comma separated values to provide multiple adapter types.
 

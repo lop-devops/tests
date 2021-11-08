@@ -1,0 +1,13 @@
+[io_vscsi]
+iteration = 10
+disk = "/dev/sdb"
+disks = "/dev/sdb /dev/sdc /dev/sdd /dev/sde"
+dir = "/mnt"
+lv_disks = "/dev/dev/sdb"
+lv_size = "40G"
+module = "ibmvscsi"
+count = 10
+fsstress_loop = 2
+num_of_dlpar = 10
+htx_disks = "/dev/sdb /dev/sdc /dev/sdd /dev/sde"
+time_limit = 30
