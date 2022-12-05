@@ -2,12 +2,13 @@ language: python
 
 matrix:
   allow_failures:
-    - python: "2.7"
+    - python: "3.7"
 
 python:
-    - "2.7"
     - "3.6"
     - "3.7"
+    - "3.8"
+    - "3.9"
 
 branches:
   only:
@@ -16,7 +17,7 @@ branches:
 sudo: false
 
 install:
-    - pip install Inspektor==0.5.2
+    - pip install Inspektor==0.5.3
 
 script:
     - inspekt checkall --disable-style E501,E265,W601,W605,E402,E722,E741 --no-license-check
