@@ -1,3 +1,10 @@
+# This repository is frozen
+
+Please refer to the new, maintained  repository:
+
+https://github.com/lop-devops/tests
+
+
 # TestSuite Wrapper for Avocado Framework Tests
 
 
