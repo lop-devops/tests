@@ -1,4 +1,5 @@
-[io_infiniband_fvt]
+[io_roce_fvt]
+mtu_timeout = ""
 hmc_ip = ""
 hmc_pwd = "" 
 hmc_username = ""
@@ -44,17 +45,24 @@ peer_public_ip =
 peer_password = ""
 peer_user = "root"
 net_ids = "140,139"
-ext_flag: "1"
-CA_NAME: "mlx4_0"
-GID_NUM: "0"
-PORT_NUM: "2"
-PEERCA: "mlx4_0"
-PEERGID: "0"
-PEERPORT: "2"
-peer_ipv6: ""
-dapl_interface: "ofa-v2-enp1s0d1"
-dapl_peer_interface: "ofa-v2-enp1s0d1"
-IPERF_RUN: 0
-iso_location:  
-nping_count: 100
-kernel_compile: "Y"
+ext_flag = "1"
+CA_NAME = "mlx4_0"
+GID_NUM = "0"
+PORT_NUM = "2"
+PEERCA = "mlx4_0"
+PEERGID = "0"
+PEERPORT = "2"
+peer_ipv6 = ""
+dapl_interface = "ofa-v2-enp1s0d1"
+dapl_peer_interface = "ofa-v2-enp1s0d1"
+IPERF_RUN = 0
+iso_location = ""   
+nping_count = 100
+kernel_compile = "Y"
+num_of_dlpar = ""
+sriov = 'yes'
+manageSystem = ""
+tx_channel = 4
+rx_channel = 4
+other_channel = 1
+combined_channel = 1
