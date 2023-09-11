@@ -1,13 +1,20 @@
 [io_vscsi]
 iteration = 10
 disk = "/dev/sdb"
-disks = "/dev/sdb /dev/sdc /dev/sdd /dev/sde"
+disks = "/dev/sdc /dev/sdd /dev/sde /dev/sdf"
 dir = "/mnt"
-lv_disks = "/dev/dev/sdb"
-lv_size = "40G"
+lv_disks = "/dev/sdg /dev/sdh /dev/sdi"
+lv_size = 10G
 module = "ibmvscsi"
 count = 10
 fsstress_loop = 2
 num_of_dlpar = 10
-htx_disks = "/dev/sdb /dev/sdc /dev/sdd /dev/sde"
+htx_disks = "/dev/sdj /dev/sdk"
 time_limit = 30
+mdt_file = "mdt.hd"
+virtual_device = "sdk"
+virtual_slot = "U9043.MRX.13ECF5X-V5-C105"
+htx_rpm_link = ""
+run_type = "rpm"
+hmc_pwd = ""
+hmc_username = ""
