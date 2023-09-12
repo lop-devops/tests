@@ -1,5 +1,20 @@
 #!/usr/bin/env python3
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+#
+# See LICENSE for more details.
+#
+# Copyright: 2023 IBM
+# Author: Narasimhan V <sim@linux.vnet.ibm.com>
+# Author: Manvanthara Puttashankar <manvanth@linux.vnet.ibm.com>
+
 from pprint import pprint
 from lib import pci
 import argparse
@@ -14,6 +29,7 @@ CONFIG_PATH = "%s/config/wrapper/pci_input.conf" % BASE_PATH
 CONFIGFILE = configparser.SafeConfigParser()
 CONFIGFILE.optionxform = str
 CONFIGFILE.read(CONFIG_PATH)
+BASE_INPUTFILE_PATH = "%s/config/inputs" % BASE_PATH
 input_path = "io_input.txt"
 INPUTFILE = configparser.ConfigParser()
 INPUTFILE.optionxform = str
@@ -38,6 +54,7 @@ def create_config(pci_list):
         cfg_name = "_".join(pci['pci_root'].split(':'))
         orig_cfg = "io_%s_fvt" % pci['adapter_type']
         new_cfg = "io_%s_%s_fvt" % (pci['adapter_type'], cfg_name)
+        inputfile = "%s/io_%s_input.txt" % (BASE_INPUTFILE_PATH, pci['adapter_type'])
         if not os.path.exists("config/tests/host/%s.cfg" % orig_cfg):
             logger.debug("ignoring pci address %s as there is no cfg for %s", pci['pci_root'], pci['adapter_type'])
             continue
@@ -52,6 +69,22 @@ def create_config(pci_list):
             continue
         INPUTFILE.add_section(new_cfg)
 
+        # read the input file content and store in dict
+        inputfile_dict = {}
+        with open(inputfile, 'r') as file:
+            for line in file:
+                # Check if the line starts with '#' or '[' and skip it
+                if line.startswith('#') or line.startswith('['):
+                    continue
+
+                # Split each line by '=' to separate key and value
+                parts = line.strip().split('=')
+
+                # Ensure there are exactly two parts (key and value)
+                if len(parts) == 2:
+                    inputkey, inputvalue = parts[0].strip(), parts[1].strip()
+                    inputfile_dict[inputkey] = inputvalue
+
         # input params
         for param in input_params:
             try:
@@ -62,9 +95,14 @@ def create_config(pci_list):
                     index = param[1].split(':')[0]
                     index_exact = param[1].split(':')[1]
                     if index_exact == 'all':
-                        value = ",".join(pci[index])
+                        value = " ".join(pci[index])
                     else:
                         value = pci[index][int(index_exact)]
+                        if len(pci[index]) > 1:
+                            del pci[index][int(index_exact)]
+                #remove the duplicate inputfile enteries
+                if key in inputfile_dict:
+                    del inputfile_dict[key]
                 INPUTFILE.set(new_cfg, key, "\"%s\"" % value)
             except:
                 pass
@@ -79,8 +117,18 @@ def create_config(pci_list):
                     continue
                 key = key.split('::')[1]
 
-            value = param.split('=')[1]
-            INPUTFILE.set(new_cfg, key, "\"%s\"" % value)
+            # check if the newly added additional param is same
+            # as inputfile assign the values directly
+            if key in inputfile_dict:
+                inputfile_dict[key] = param.split('=')[1]
+            else:
+            #if it is completly new then directly write to new input file
+                value = param.split('=')[1]
+                INPUTFILE.set(new_cfg, key, "\"%s\"" % value)
+
+        # append the remaining input file entries to the new input file
+        for inputkey, inputvalue in inputfile_dict.items():
+            INPUTFILE.set(new_cfg, inputkey, "%s" % inputvalue)
 
     test_suites = ",".join(test_suites)
 
