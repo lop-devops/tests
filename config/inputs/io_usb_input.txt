@@ -1,17 +1,17 @@
 [io_usb]
-manageSystem = ""
-iteration = 10
+disk = /dev/sdc1
+htx_disks = "/dev/sdc7 /dev/sdc8"
+disks = "/dev/sdc2 /dev/sdc3 /dev/sdc6 /dev/sdc5"
 pci_device = "001a:01:00.0"
 pci_devices = "001a:01:00.0"
-disk = /dev/sdc1
-disks = "/dev/sdc2 /dev/sdc3 /dev/sdc6 /dev/sdc5"
-dir = "/mnt"
 module = "xhci_hcd"
-htx_disks = "/dev/sdc7 /dev/sdc8"
+dir = "/mnt"
 count = 10
-hmc_pwd = ""
-hmc_username = ""
 fsstress_loop = 2
 num_of_dlpar = 20
-htx_rpm_link = ""
+iteration = 10
 run_type = 'rpm'
+manageSystem = ""
+hmc_username = ""
+hmc_pwd = ""
+htx_rpm_link = ""
