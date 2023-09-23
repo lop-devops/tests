@@ -1,52 +1,27 @@
-[io_nvmf_rhel8x]	
-iteration = 30
-pci_device = "002c:01:00.0"
-pci_devices = "002c:01:00.0 002c:01:00.1"
-disk = "/dev/mapper/mpatha"
-disks = "/dev/mapper/mpathb /dev/mapper/mpathc /dev/mapper/mpathd /dev/mapper/mpathe"
-dir = "/mnt"
-lv_disks = "/dev/mapper/mpathf /dev/mapper/mpathg /dev/mapper/mpathh"
-lv_size = "10G"
-#make it space separated
-wwids = 'eui.a8000000000002ad00507608108001b3 eui.a8000000000002aa00507608108001b3'
-module = "nvme_core"
-htx_disks = "/dev/mapper/mpathh /dev/mapper/mpati"
-count = 30
-#port bounce
-switch_name = ""
-userid = ""
-password = ""
-#fcdlpar
-hmc_pwd = ""
-hmc_username = ""
-fsstress_loop = 3
-num_of_dlpar = 30
-manageSystem = ""
-htx_rpm_link = ""
-run_type = "rpm"
-
-
-[io_nvmf]
-iteration = 20
-pci_device = "002c:01:00.0"
-pci_devices = "002c:01:00.0 002c:01:00.1"
+[io_nvmf_rhel9x]
 device = nvme2
 disk = "/dev/nvme1n2"
-disks = "/dev/nvme1n3 /dev/nvme1n4 /dev/nvme1n5 /dev/nvme1n6"
-dir = "/mnt"
 lv_disks = "/dev/nvme1n7 /dev/nvme1n8"
-lv_size = "5G"
-module = "nvme_core"
 htx_disks = "/dev/nvme1n9 /dev/nvme1n10"
+disks = "/dev/nvme1n3 /dev/nvme1n4 /dev/nvme1n5 /dev/nvme1n6"
+pci_device = "002c:01:00.0"
+pci_devices = "002c:01:00.0 002c:01:00.1"
+module = "nvme_core"
+dir = "/mnt"
+lv_size = "5G"
 count = 20
-switch_name = ""
-userid = ""
-password = ""
-#fcdlpar
-hmc_pwd = ""
-hmc_username = ""
 fsstress_loop = 2
 num_of_dlpar = 20
-manageSystem = "" 
-htx_rpm_link = ""
+iteration = 20
 run_type = 'rpm'
+max_freeze = 6
+function = 4
+err = 1
+manageSystem = "" 
+userid = ""
+password = ""
+hmc_username = ""
+hmc_pwd = ""
+htx_rpm_link = ""
+switch_name = ""
+#fcdlpar
