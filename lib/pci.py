@@ -699,9 +699,6 @@ def pci_info(pci_addrs, pci_type='', pci_blocklist='', type_blocklist=''):
         pci_dic['disks'] = []
         pci_dic['mpath_wwids'] = []
         pci_dic['mpath_disks'] = []
-        if pci_dic['class'] == 'scsi_host':
-            pci_dic['mpath_wwids'] = get_multipath_wwids(pci_dic['disks'])
-            pci_dic['mpath_disks'] = get_multipath_disks(pci_dic['mpath_wwids'])
         if pci_dic['adapter_type'] == 'fc' and is_nvmf():
             pci_dic['adapter_type'] = 'nvmf'
             if is_rhel8():
@@ -715,6 +712,10 @@ def pci_info(pci_addrs, pci_type='', pci_blocklist='', type_blocklist=''):
             for interface in pci_dic['interfaces']:
                 pci_dic['disks'].extend(get_disks_in_interface(interface))
             pci_dic['disks'] = list(set(pci_dic['disks']))
+        if pci_dic['class'] == 'scsi_host' and not pci_dic['adapter_type'] == 'nvmf':
+            pci_dic['mpath_wwids'] = get_multipath_wwids(pci_dic['disks'])
+            pci_dic['mpath_disks'] = get_multipath_disks(pci_dic['mpath_wwids'])
+            pci_dic['disks'] = pci_dic['mpath_disks']
         pci_dic['pci_root'] = pci_addr
         pci_dic['adapter_description'] = get_pci_name(pci_dic['functions'][0])
         pci_dic['adapter_id'] = get_pci_id(pci_dic['functions'][0])
