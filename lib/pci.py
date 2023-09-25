@@ -547,7 +547,7 @@ def pci_info(pci_addrs, pci_type='', pci_blocklist='', type_blocklist=''):
         pci_dic['is_root_disk'] = False
         for disk in pci_dic['disks']:
             for root_disk in root_disks:
-                if root_disk in disk:
+                if root_disk == disk:
                     pci_dic['is_root_disk'] = True
                     break
         pci_list.append(pci_dic)
