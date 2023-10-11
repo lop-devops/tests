@@ -188,8 +188,7 @@ def get_interfaces_in_pci_address(pci_address, pci_class):
     if not pci_class or not os.path.isdir(pci_class_path):
         return ""
     return [interface for interface in os.listdir(pci_class_path)
-            if pci_address in os.readlink(os.path.join(pci_class_path,
-                                                       interface))]
+            if os.path.islink(os.path.join(pci_class_path, interface)) and pci_address in os.readlink(os.path.join(pci_class_path, interface))]
 
 
 def get_pci_class_name(pci_address):
