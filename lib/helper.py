@@ -20,6 +20,7 @@ import re
 import sys
 import shutil
 import stat
+import platform
 
 from .logger import logger_init
 
@@ -177,6 +178,21 @@ def copy_dir_file(src, dest):
         # changing permission to 744
         os.chmod(d_file, stat.S_IRWXU | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
     logger.info("copied all files from  %s to %s" % (src, dest))
+
+
+def is_rhel8():
+    """
+    Check the OS version
+
+    :return: True if it is rhel8 False otherwise
+    """
+    system_info = platform.system()
+    release_info = platform.release()
+
+    if system_info == "Linux" and "el8" in release_info:
+        return True
+    else:
+        return False
 
 
 def remove_file(src, dest):
