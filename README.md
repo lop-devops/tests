@@ -296,6 +296,41 @@ So, if such tests are identified and need to be "not run" for a particular envir
 
 -----
 
+### Analysis of results:
+analysis.py script is used to simplify analysis/comparison of avocado test runs by generating an excel file (.xlsx) of the same. The results.json file which gets created after avocado run, is passed as input in command line. Depending on the flag/options provided, the excel sheet will be generated.
+
+> `$ python3 analysis.py [--options] [input(s)]`
+
+#### Prerequisites:
+1. `python3`
+2. `python pandas and excel dependencies`
+    > `$ pip3 install pandas[excel]`
+
+#### Inputs:
+>After avocado run, the `results.json` file generated
+
+#### Options:
+1. `--new-analysis`:
+    > This flag is used to generate an excel file which contains analysis having test case name as "ID", test status as "Status" and fail reason if any as "Fail Reason". It can used to generate analysis on a single test run results.json file.
+
+    > `$ python3 analysis.py --new-analysis [json_file]`
+
+2. `--add-to-existing`:
+    > This flag is used to append new results.json dat to an already existing excel file. This flag can be used to compare new runs with the previous runs so that we can have our own analysis.
+
+    > `$ python3 analysis.py --add-to-existing [xlsx_file] [json_file]`
+
+3. `--compare-two-results`:
+    > This flag is used to compare exactly two results.json files by the addition of a new column "Result" in the excel file. This column will simply point which results are different from the last run of the same corresponding test names (ID). 
+    > 1. "DIFF" value represents different test status (Status)
+    > 2. "REGRESSION" value represents tests which had passed in the previous run but did not now
+    > 3. "SOLVED" value represents tests which have passed now and di not earlier
+    > 4. "" value represents no change in the test status.
+    
+    > `$ python3 analysis.py --compare-two-results [old_json_file] [new_json_file]`
+
+-----
+
 ### References:
 * [Avocado Test Framework](https://github.com/avocado-framework/avocado)
 * [Avocado Test Framework documenation](http://avocado-framework.readthedocs.org)

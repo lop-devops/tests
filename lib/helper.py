@@ -72,13 +72,13 @@ def get_dist():
             if line.startswith("ID="):
                 try:
                     line = line.replace('"', '')
-                    dist = re.findall("ID=(\S+)", line)[0]
+                    dist = re.findall("ID=(\\S+)", line)[0]
                 except:
                     pass
             elif line.startswith("VERSION="):
                 try:
                     line = line.replace('"', '')
-                    dist_ver = re.findall("VERSION=(\S+)", line)[0].lower().replace("-", ".")
+                    dist_ver = re.findall("VERSION=(\\S+)", line)[0].lower().replace("-", ".")
                 except:
                     pass
         fd.close()

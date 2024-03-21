@@ -188,8 +188,7 @@ def get_interfaces_in_pci_address(pci_address, pci_class):
     if not pci_class or not os.path.isdir(pci_class_path):
         return ""
     return [interface for interface in os.listdir(pci_class_path)
-            if pci_address in os.readlink(os.path.join(pci_class_path,
-                                                       interface))]
+            if os.path.islink(os.path.join(pci_class_path, interface)) and pci_address in os.readlink(os.path.join(pci_class_path, interface))]
 
 
 def get_pci_class_name(pci_address):
@@ -548,7 +547,7 @@ def pci_info(pci_addrs, pci_type='', pci_blocklist='', type_blocklist=''):
         pci_dic['is_root_disk'] = False
         for disk in pci_dic['disks']:
             for root_disk in root_disks:
-                if root_disk in disk:
+                if root_disk == disk:
                     pci_dic['is_root_disk'] = True
                     break
         pci_list.append(pci_dic)
