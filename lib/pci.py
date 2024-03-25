@@ -22,6 +22,9 @@ import re
 import os
 import platform
 from .helper import runcmd, is_rhel8
+from lib.logger import logger_init
+BASE_PATH = os.path.dirname(os.path.abspath(__file__))
+logger = logger_init(filepath=BASE_PATH).getlogger()
 
 
 def get_domains():
@@ -67,7 +70,7 @@ def list_fc_host_names(pci_domain):
     nvmf_disks = []
 
     sys_devices_path = '/sys/devices'
-    pci_domain_path = os.path.join(sys_devices_path, 'pci' + pci_domain)
+    pci_domain_path = "%s/%s%s" % (sys_devices_path, 'pci', pci_domain)
 
     if not os.path.exists(pci_domain_path):
         print(f"PCI domain '{pci_domain}' not found.")
@@ -79,13 +82,10 @@ def list_fc_host_names(pci_domain):
                 if dir_name.startswith('host'):
                     fc_host_names.append(dir_name)
 
-        node_names = list_nvmf_fc_node_names(list(set(fc_host_names)))
-        nvme_names = list_nvmf_nvme_names(node_names)
-        nvmf_disks = list_nvmf_disks(nvme_names)
-        return nvmf_disks
+        return list_nvmf_disks(list_nvmf_nvme_names(list_nvmf_fc_node_names(list(set(fc_host_names)))))
 
     except Exception as e:
-        print(f"Error while traversing PCI domain '{pci_domain}': {str(e)}")
+        logger.debug("Error while traversing PCI domain %s", pci_domain)
         return []
 
 def list_nvmf_fc_node_names(host_names):
