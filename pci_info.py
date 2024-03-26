@@ -23,6 +23,7 @@ import os
 import sys
 import configparser
 from lib.logger import logger_init
+from lib.helper import is_rhel8
 
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = "%s/config/wrapper/pci_input.conf" % BASE_PATH
@@ -52,9 +53,14 @@ def create_config(pci_list):
 
         # copy template cfg files and create new ones
         cfg_name = "_".join(pci['pci_root'].split(':'))
-        orig_cfg = "io_%s_fvt" % pci['adapter_type']
-        new_cfg = "io_%s_%s_fvt" % (pci['adapter_type'], cfg_name)
-        inputfile = "%s/io_%s_input.txt" % (BASE_INPUTFILE_PATH, pci['adapter_type'])
+        if pci['adapter_type'] == 'nvmf' and is_rhel8():
+            orig_cfg = "io_%s_rhel8_fvt" % pci['adapter_type']
+            new_cfg = "io_%s_rhel8_%s_fvt" % (pci['adapter_type'], cfg_name)
+            inputfile = "%s/io_%s_rhel8_input.txt" % (BASE_INPUTFILE_PATH, pci['adapter_type'])
+        else:
+            orig_cfg = "io_%s_fvt" % pci['adapter_type']
+            new_cfg = "io_%s_%s_fvt" % (pci['adapter_type'], cfg_name)
+            inputfile = "%s/io_%s_input.txt" % (BASE_INPUTFILE_PATH, pci['adapter_type'])
         if not os.path.exists("config/tests/host/%s.cfg" % orig_cfg):
             logger.debug("ignoring pci address %s as there is no cfg for %s", pci['pci_root'], pci['adapter_type'])
             continue
@@ -98,7 +104,7 @@ def create_config(pci_list):
                         value = " ".join(pci[index])
                     else:
                         value = pci[index][int(index_exact)]
-                        if len(pci[index]) > 1:
+                        if len(pci[index]) > 1 and not key == 'pci_device':
                             del pci[index][int(index_exact)]
                 #remove the duplicate inputfile enteries
                 if key in inputfile_dict:

@@ -11,6 +11,7 @@
 #
 # Copyright: 2019 IBM
 # Author: Narasimhan V <sim@linux.vnet.ibm.com>
+# Author: Manvanthara Puttashankar <manvanth@linux.vnet.ibm.com>
 
 """
 Module for all PCI devices related functions.
@@ -20,8 +21,10 @@ Module for all PCI devices related functions.
 import re
 import os
 import platform
-
-from .helper import runcmd
+from .helper import runcmd, is_rhel8
+from lib.logger import logger_init
+BASE_PATH = os.path.dirname(os.path.abspath(__file__))
+logger = logger_init(filepath=BASE_PATH).getlogger()
 
 
 def get_domains():
@@ -39,6 +42,117 @@ def get_domains():
         return list(set(domains))
     return []
 
+def  is_nvmf():
+    """
+    Verify if nvmf is configured
+
+    :return: True if nvmf is configure, False if nvmf is not configured
+    """
+
+    nvme_list_subsys_output = runcmd("nvme list-subsys")[1]
+    if "fc" in nvme_list_subsys_output:
+        return True
+    else:
+        return False
+
+def list_fc_host_names(pci_domain):
+    """
+    For a specific PCI domain find the nvmf disks behind FC PCI domain
+
+    :param dom_pci_address: Partial PCI address including domain
+                            address (0000, 0000:00:1f, 0000:00:1f.2, etc)
+
+    :return: nvmf disks.
+    """
+    fc_host_names = []
+    node_names = []
+    nvme_names = []
+    nvmf_disks = []
+
+    sys_devices_path = '/sys/devices'
+    pci_domain_path = "%s/%s%s" % (sys_devices_path, 'pci', pci_domain)
+
+    if not os.path.exists(pci_domain_path):
+        print(f"PCI domain '{pci_domain}' not found.")
+        return fc_host_names
+
+    try:
+        for root, dirs, files in os.walk(pci_domain_path):
+            for dir_name in dirs:
+                if dir_name.startswith('host'):
+                    fc_host_names.append(dir_name)
+
+        return list_nvmf_disks(list_nvmf_nvme_names(list_nvmf_fc_node_names(list(set(fc_host_names)))))
+
+    except Exception as e:
+        logger.debug("Error while traversing PCI domain %s", pci_domain)
+        return []
+
+def list_nvmf_fc_node_names(host_names):
+    """
+    For every FC hostnames find the node_name
+
+    :param host_names for e.g host1,host2
+
+    :return: unique node_name for the FC host.
+    """
+    fc_host_dir = '/sys/class/fc_host'
+    node_names = []
+
+    for host_name in host_names:
+        host_path = os.path.join(fc_host_dir, host_name)
+
+        if not os.path.exists(host_path):
+            print(f"FC host '{host_name}' not found.")
+            continue
+
+        try:
+            with open(os.path.join(host_path, 'node_name'), 'r') as node_file:
+                node_name = node_file.read().strip()
+                node_names.append(node_name)
+
+        except Exception as e:
+            print(f"Error reading FC host information: {str(e)}")
+
+    return node_names
+
+def list_nvmf_nvme_names(node_names):
+    """
+    In the nvme list-subsystem output find the nvme host specific to FC  node names
+
+    :param unique node_names for each FC host
+
+    :return: nvme host names for the corresponding FC node names.
+    """
+    nvme_names = []
+    lines = runcmd('nvme list-subsys')[1].splitlines()
+
+    for line in lines:
+        for word in node_names:
+            if re.search(word, line):
+                parts = line.strip().split()
+                nvme_names.append(parts[1])
+
+    return nvme_names
+
+def list_nvmf_disks(nvme_names):
+    """
+     Traverse through nvme list command to find the corresponding nvmf disks
+     for the nvme names
+
+    :param nvmf name names for e.g nvme2, nvme3 etc
+
+    :return: nvmf disks associated with nvme names.
+    """
+    nvmf_disks = []
+    lines = runcmd('nvme list')[1].splitlines()
+
+    for line in lines:
+        for word in nvme_names:
+            if re.search(word, line):
+                parts = line.strip().split()
+                nvmf_disks.append(parts[0])
+    return nvmf_disks
 
 def get_pci_addresses():
     """
@@ -52,7 +166,6 @@ def get_pci_addresses():
         if not get_pci_prop(line.split()[0], 'Class').startswith('06'):
             addresses.append(line.split()[0])
     return addresses
-
 
 def get_num_interfaces_in_pci(dom_pci_address):
     """
@@ -73,7 +186,6 @@ def get_num_interfaces_in_pci(dom_pci_address):
                 count += 1
     return count
 
-
 def get_disks_in_pci_address(pci_address):
     """
     Gets disks in a PCI address.
@@ -90,7 +202,6 @@ def get_disks_in_pci_address(pci_address):
             disk_list.append(os.path.abspath(os.path.join(disks_path, link)))
     return disk_list
 
-
 def get_disks_in_interface(interface):
     """
     Gets disks in a PCI interface.
@@ -106,7 +217,6 @@ def get_disks_in_interface(interface):
         if "/%s/" % interface in link:
             disk_list.append('/dev/%s' % dev)
     return disk_list
-
 
 def get_multipath_wwids(disks_list):
     """
@@ -130,7 +240,6 @@ def get_multipath_wwids(disks_list):
                 existing_wwids.append(line.split('/')[1])
     return [mpath for mpath in list(set(wwid_list)) if mpath in existing_wwids]
 
-
 def get_multipath_disks(wwids_list):
     """
     Get mpath disk names for given wwids
@@ -145,7 +254,6 @@ def get_multipath_disks(wwids_list):
         mpath_list.append("/dev/mapper/%s" % disk)
     return mpath_list
 
-
 def get_root_disks():
     """
     Gets the PCI address of the root disk.
@@ -159,7 +267,6 @@ def get_root_disks():
             root_disk.append('/dev/%s' % line.split()[0])
     return root_disk
 
-
 def get_nics_in_pci_address(pci_address):
     """
     Gets network interface(nic) in a PCI address.
@@ -169,7 +276,6 @@ def get_nics_in_pci_address(pci_address):
     :return: list of network interfaces in a PCI address.
     """
     return get_interfaces_in_pci_address(pci_address, "net")
-
 
 def get_interfaces_in_pci_address(pci_address, pci_class):
     """
@@ -188,8 +294,8 @@ def get_interfaces_in_pci_address(pci_address, pci_class):
     if not pci_class or not os.path.isdir(pci_class_path):
         return ""
     return [interface for interface in os.listdir(pci_class_path)
-            if os.path.islink(os.path.join(pci_class_path, interface)) and pci_address in os.readlink(os.path.join(pci_class_path, interface))]
-
+            if pci_address in os.readlink(os.path.join(pci_class_path,
+                                                       interface))]
 
 def get_pci_class_name(pci_address):
     """
@@ -210,7 +316,6 @@ def get_pci_class_name(pci_address):
         return ""
     return pci_class_dic.get(pci_class_id)
 
-
 def get_pci_type(pci_address):
     """
     Gets PCI type for given PCI bus address
@@ -229,7 +334,6 @@ def get_pci_type(pci_address):
     if pci_class_id not in pci_class_dic:
         return ""
     return pci_class_dic.get(pci_class_id)
-
 
 def get_firmware(pci_address):
     """
@@ -402,22 +506,31 @@ def get_pci_name(pci_address):
         return " ".join(pci_name)
     return ""
 
-
-def get_driver(pci_address):
+def get_driver(adapter_type, pci_address):
     """
     Gets the kernel driver in use of given PCI address. (first match only)
 
+    :param adapter_type: IO adapter type
     :param pci_address: Any segment of a PCI address (1f, 0000:00:1f, ...)
 
     :return: driver of a PCI address.
     """
+    if adapter_type == 'nvmf':
+        lsmod_output = runcmd('lsmod | grep nvme_fc')[1].splitlines()
+        drivers = []
+        for line in lsmod_output:
+            parts = line.strip().split()
+            if len(parts) > 0:
+                drivers.append(parts[0])
+
+        return drivers
+
     output = runcmd("lspci -ks %s" % pci_address)[1]
     if output:
         for line in output.splitlines():
             if 'Kernel driver in use:' in line:
                 return line.rsplit(None, 1)[-1]
     return ""
-
 
 def ioa_details():
     """
@@ -459,6 +572,25 @@ def get_primary_ioa(pci_address):
             return ioa_detail['ioa']
     return ''
 
+def get_multipath_nvmf_wwids():
+    """
+    Gets the wwids of the nvmf multipath disks
+
+    :return: wwids
+    """
+    lines = runcmd('multipath -ll')[1].splitlines()
+    wwid_list = []
+    nvme_pattern = r"NVME"
+
+    # Regular expression pattern to match WWID
+    wwid_pattern = r"eui\.[a-fA-F\d]+"
+
+    for line in lines:
+        if re.search(nvme_pattern, line):
+            wwid_matches = re.findall(wwid_pattern, line)
+            wwid_list.extend(wwid_matches)
+
+    return wwid_list
 
 def get_secondary_ioa(primary_ioa):
     """
@@ -512,30 +644,41 @@ def pci_info(pci_addrs, pci_type='', pci_blocklist='', type_blocklist=''):
         pci_dic = {}
         root_disks = get_root_disks()
         pci_dic['functions'] = get_pci_fun_list(pci_addr)
+        pci_dic['adapter_type'] = get_pci_type(pci_dic['functions'][0])
+        pci_dic['class'] = get_pci_class_name(pci_dic['functions'][0])
+        pci_dic['interfaces'] = []
+        for fun in pci_dic['functions']:
+            pci_dic['interfaces'].extend(get_interfaces_in_pci_address(fun, pci_dic['class']))
+        pci_dic['disks'] = []
+        pci_dic['mpath_wwids'] = []
+        pci_dic['mpath_disks'] = []
+        if pci_dic['adapter_type'] == 'fc' and is_nvmf():
+            pci_dic['adapter_type'] = 'nvmf'
+            if is_rhel8():
+                pci_dic['mpath_wwids'] = get_multipath_nvmf_wwids()
+                pci_dic['mpath_disks'] = get_multipath_disks(pci_dic['mpath_wwids'])
+                pci_dic['disks'] = pci_dic['mpath_disks']
+            else:
+                pci_val = ':'.join(pci_addr.split(':')[:2])
+                pci_dic['disks'] = list_fc_host_names(pci_val)
+        else:
+            for interface in pci_dic['interfaces']:
+                pci_dic['disks'].extend(get_disks_in_interface(interface))
+            pci_dic['disks'] = list(set(pci_dic['disks']))
+        if pci_dic['class'] == 'scsi_host' and not pci_dic['adapter_type'] == 'nvmf':
+            pci_dic['mpath_wwids'] = get_multipath_wwids(pci_dic['disks'])
+            pci_dic['mpath_disks'] = get_multipath_disks(pci_dic['mpath_wwids'])
+            pci_dic['disks'] = pci_dic['mpath_disks']
         pci_dic['pci_root'] = pci_addr
         pci_dic['adapter_description'] = get_pci_name(pci_dic['functions'][0])
         pci_dic['adapter_id'] = get_pci_id(pci_dic['functions'][0])
-        pci_dic['adapter_type'] = get_pci_type(pci_dic['functions'][0])
-        pci_dic['driver'] = get_driver(pci_dic['functions'][0])
+        pci_dic['driver'] = get_driver(pci_dic['adapter_type'], pci_dic['functions'][0])
         pci_dic['slot'] = get_slot_from_sysfs(pci_dic['functions'][0])
         if pci_dic['adapter_type'] in type_blocklist:
             continue
         elif "All" not in pci_type and pci_dic['adapter_type'] not in pci_type:
             continue
-        pci_dic['interfaces'] = []
-        pci_dic['class'] = get_pci_class_name(pci_dic['functions'][0])
-        for fun in pci_dic['functions']:
-            pci_dic['interfaces'].extend(get_interfaces_in_pci_address(fun, pci_dic['class']))
         pci_dic['firmware'] = get_firmware(pci_dic['functions'][0])
-        pci_dic['disks'] = []
-        for interface in pci_dic['interfaces']:
-            pci_dic['disks'].extend(get_disks_in_interface(interface))
-        pci_dic['disks'] = list(set(pci_dic['disks']))
-        pci_dic['mpath_wwids'] = []
-        pci_dic['mpath_disks'] = []
-        if pci_dic['class'] == 'scsi_host':
-            pci_dic['mpath_wwids'] = get_multipath_wwids(pci_dic['disks'])
-            pci_dic['mpath_disks'] = get_multipath_disks(pci_dic['mpath_wwids'])
         pci_dic['infiniband_interfaces'] = []
         if pci_dic['adapter_type'] == 'infiniband':
             for fun in pci_dic['functions']:
@@ -547,7 +690,7 @@ def pci_info(pci_addrs, pci_type='', pci_blocklist='', type_blocklist=''):
         pci_dic['is_root_disk'] = False
         for disk in pci_dic['disks']:
             for root_disk in root_disks:
-                if root_disk == disk:
+                if root_disk in disk:
                     pci_dic['is_root_disk'] = True
                     break
         pci_list.append(pci_dic)
