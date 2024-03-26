@@ -626,6 +626,10 @@ if __name__ == '__main__':
     parser.add_argument('--nrunner', dest="nrunner", action='store_true',
                         default=False, help='enable Parallel run')
 
+    parser.add_argument('--run-tests', dest="run_tests", action='store',
+                        default=None,
+                        help="To run the host tests provided in the option and publish result [Note: test names(full path) and separated by comma]")
+
     args = parser.parse_args()
     if helper.get_machine_type() == 'pHyp':
         args.enable_kvm = False
@@ -667,6 +671,11 @@ if __name__ == '__main__':
         else:
             bootstrap(args.enable_kvm)
         bootstraped = True
+
+    if args.run_tests:
+        with open("%s/host/dynamic_test_suite" % TEST_CONF_PATH+".cfg","w+") as fp:
+            fp.write('\n'.join(args.run_tests.split(",")))
+        args.run_suite = str(args.run_suite)+","+"host_dynamic_test_suite"
 
     if args.inputfile:
         if not os.path.isfile(args.inputfile):
