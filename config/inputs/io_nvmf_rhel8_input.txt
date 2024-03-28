@@ -1,0 +1,26 @@
+[io_nvmf_rhel8x]	
+disk = "/dev/mapper/mpatha"
+lv_disks = "/dev/mapper/mpathf /dev/mapper/mpathg /dev/mapper/mpathh"
+htx_disks = "/dev/mapper/mpathh /dev/mapper/mpati"
+disks = "/dev/mapper/mpathb /dev/mapper/mpathc /dev/mapper/mpathd /dev/mapper/mpathe"
+wwids = 'eui.a8000000000002ad00507608108001b3 eui.a8000000000002aa00507608108001b3'
+pci_device = "002c:01:00.0"
+pci_devices = "002c:01:00.0 002c:01:00.1"
+module = "nvme_core"
+dir = "/mnt"
+lv_size = "10G"
+count = 30
+fsstress_loop = 3
+num_of_dlpar = 30
+num_of_hotplug = 20
+iteration = 30
+run_type = "rpm"
+manageSystem = ""
+userid = ""
+password = ""
+hmc_username = ""
+hmc_pwd = ""
+htx_rpm_link = ""
+switch_name = ""
+#port bounce
+#fcdlpar
