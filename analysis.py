@@ -16,10 +16,10 @@
 
 
 '''
-    analysis.py script is aimed to help in analysis/comparison of avocado test runs 
-    by generating a simple excel file (.xlsx). The results.json file which gets created 
-    after avocado run is passed as input in command line while running this script and 
-    depending on the flag/options provided, the excel analysis/omparison sheet will be 
+    analysis.py script is aimed to help in analysis/comparison of avocado test runs
+    by generating a simple excel file (.xlsx). The results.json file which gets created
+    after avocado run is passed as input in command line while running this script and
+    depending on the flag/options provided, the excel analysis/omparison sheet will be
     generated.
 
     Prerequsites:-
@@ -77,10 +77,10 @@ def test_analysis(data):
     dataframe.to_excel('Analysis.xlsx', index=False)
 
 
-def Comparison_Analysis(excel, data):
+def comparison_analysis(excel, data):
     '''
         This function is used to generate an excel sheet which gives delta comparison
-        of two test avocado based test runs. Using excel sheet produced from the 
+        of two test avocado based test runs. Using excel sheet produced from the
         function: test_analysis(data) and results.json as inputs, it generate a .xlsx
         file as output.
     '''
@@ -136,6 +136,8 @@ def Comparison_Analysis(excel, data):
                     results.append("REGRESSION")
                 elif dataframe.loc[i].iat[-2] == "PASS" and not pd.isnull(dataframe.loc[i].iat[-4]):
                     results.append("SOLVED")
+                elif pd.isnull(dataframe.loc[i].iat[-4]) or pd.isnull(dataframe.loc[i].iat[-2]):
+                    results.append("")
                 else:
                     results.append("DIFF")
 
@@ -216,7 +218,7 @@ def main():
             with open(sys.argv[-1], 'r') as json_file:
                 data = json.load(json_file)
             excel = sys.argv[-2]
-            Comparison_Analysis(excel, data)
+            comparison_analysis(excel, data)
             deco(excel)
 
         elif "--compare-two-results" in sys.argv:
@@ -227,19 +229,20 @@ def main():
 
             with open(sys.argv[-1], 'r') as json_file:
                 data = json.load(json_file)
-            Comparison_Analysis("Analysis.xlsx", data)
+            comparison_analysis("Analysis.xlsx", data)
             deco("Analysis.xlsx")
-        
+
         else:
             raise Exception
-        
-    except:
+
+    except Exception as e:
+        print(str(e))
         print("\nPay attention on the usage:\n"+usage())
         sys.exit(1)
 
 
 def usage():
-    return("python3 analysis.py --new-analysis <json_file>\n\
+    return ("python3 analysis.py --new-analysis <json_file>\n\
 python3 analysis.py --add-to-existing <xlsx_file> <json_file>\n\
 python3 analysis.py --compare-two-results <old_json_file> <new_json_file>\n")
 
