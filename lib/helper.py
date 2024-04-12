@@ -243,14 +243,15 @@ class PipMagager:
         else:
             pip_installcmd = '%s install -U' % self.pip_cmd
         for package in self.install_packages:
-            cmd = '%s %s' % (pip_installcmd, package)
+            cmd = '%s %s --break-system-packages' % (pip_installcmd, package)
             runcmd(cmd,
                    err_str='Package installation via pip failed: package  %s' % package,
                    debug_str='Installing python package %s using pip' % package)
 
     def uninstall(self):
         for package in self.uninstall_packages:
-            cmd = "%s uninstall %s -y --disable-pip-version-check" % (self.pip_cmd, package)
+            cmd = "%s uninstall %s --break-system-packages -y \
+                    --disable-pip-version-check" % (self.pip_cmd, package)
             runcmd(cmd, ignore_status=True,
                    err_str="Error in removing package: %s" % package,
                    debug_str="Uninstalling %s" % package)
