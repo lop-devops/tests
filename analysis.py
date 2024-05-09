@@ -17,10 +17,10 @@
 
 '''
     analysis.py script is aimed to help in analysis/comparison of avocado test runs
-    by generating a simple excel file (.xlsx). The results.json file which gets created
-    after avocado run is passed as input in command line while running this script and
-    depending on the flag/options provided, the excel analysis/omparison sheet will be
-    generated.
+    by generating a simple excel (.xlsx) and html (.html) files. The results.json file
+    which gets created after avocado run is passed as input in command line while running
+    this script and depending on the flag/options provided, the excel analysis/comparison
+    sheet will be generated.
 
     Prerequsites:-
     pip3 install pandas[excel]
@@ -29,11 +29,9 @@
 
     flags/options:-
     1. --new-analysis
-    2. --add-to-existing
-    3. --compare-two-results
+    2. --compare-two-results
 
     python3 analysis.py --new-analysis <json_file>
-    python3 analysis.py --add-to-existing <xlsx_file> <json_file>
     python3 analysis.py --compare-two-results <old_json_file> <new_json_file>
 
     Check README.md for more explanation
@@ -76,6 +74,28 @@ def test_analysis(data):
 
     # Save the DataFrame to a Excel file
     dataframe.to_excel('Analysis.xlsx', index=False)
+
+    # Save the DataFrame to a HTML page
+    summary = {
+            'Analysis_Type': 'New',
+            'Regression': None,
+            'Solved': None,
+            'Diff': None,
+            'New': {
+                'Name': dataframe.loc[0].iat[-1],
+                'Fail': dataframe.loc[1].iat[-1],
+                'Error': dataframe.loc[2].iat[-1],
+                'Skip': dataframe.loc[3].iat[-1],
+                'Interrupt': dataframe.loc[4].iat[-1],
+                'Cancel': dataframe.loc[5].iat[-1],
+                'Pass': dataframe.loc[6].iat[-1],
+                'White-Board': dataframe.loc[7].iat[-1]
+            }
+    }
+    json_object = json.dumps(summary, indent=4)
+    if "--new-analysis" in sys.argv:
+        print(json_object)
+        analysis_to_html(summary)
 
 
 def comparison_analysis(excel, data):
@@ -124,11 +144,15 @@ def comparison_analysis(excel, data):
             new_dataframe.loc[len(old_dataframe.index) -
                               1] = [test['status'], test['fail_reason']]
 
+    # Save the DataFrame to a Excel file
     final_res = pd.concat([old_dataframe, new_dataframe], axis=1)
     final_res.to_excel(excel, index=False)
 
     # Add the Result column to compare two results
     if "--compare-two-results" in sys.argv:
+        regression_count = 0
+        solved_count = 0
+        difference_count = 0
         dataframe = pd.read_excel(excel)
         results = []
         for i in range(len(dataframe.index)):
@@ -137,19 +161,44 @@ def comparison_analysis(excel, data):
             else:
                 if dataframe.loc[i].iat[-4] == "PASS" and not pd.isnull(dataframe.loc[i].iat[-2]):
                     results.append("REGRESSION")
+                    regression_count += 1
                 elif dataframe.loc[i].iat[-2] == "PASS" and not pd.isnull(dataframe.loc[i].iat[-4]):
                     results.append("SOLVED")
+                    solved_count += 1
                 elif pd.isnull(dataframe.loc[i].iat[-4]) or pd.isnull(dataframe.loc[i].iat[-2]):
                     results.append("")
                 else:
                     results.append("DIFF")
+                    difference_count += 1
 
         result_dataframe = pd.DataFrame(columns=['Result'])
         for i in range(8, len(results)):
             result_dataframe.loc[i] = results[i]
 
+        # Save the DataFrame to a Excel file
         final_dataframe = pd.concat([dataframe, result_dataframe], axis=1)
         final_dataframe.to_excel(excel, index=False)
+
+        # Save the DataFrame to a HTML page
+        summary = {
+            'Analysis_Type': 'Comparison',
+            'Regression': regression_count,
+            'Solved': solved_count,
+            'Diff': difference_count,
+            'New': {
+                'Name': new_dataframe.loc[0].iat[-1],
+                'Fail': new_dataframe.loc[1].iat[-1],
+                'Error': new_dataframe.loc[2].iat[-1],
+                'Skip': new_dataframe.loc[3].iat[-1],
+                'Interrupt': new_dataframe.loc[4].iat[-1],
+                'Cancel': new_dataframe.loc[5].iat[-1],
+                'Pass': new_dataframe.loc[6].iat[-1],
+                'White-Board': new_dataframe.loc[7].iat[-1]
+            }
+        }
+        json_object = json.dumps(summary, indent=4)
+        print(json_object)
+        analysis_to_html(summary)
 
 
 def deco(excel):
@@ -215,6 +264,261 @@ def deco(excel):
     workbook.save(excel)
 
 
+def analysis_to_html(summary):
+    '''
+        This function is used convert the .xlsx output to .html
+    '''
+
+    analysis_type = summary['Analysis_Type']
+
+    # Read Excel file
+    excel_file = pd.ExcelFile('Analysis.xlsx')
+    sheet_names = excel_file.sheet_names
+
+    # Function to apply color based on status
+    def apply_formatting(status):
+        if status == 'PASS':
+            return ('green', 'lightgreen')  # Light green
+        elif status == 'FAIL':
+            return ('red', 'lightcoral')  # Light red
+        elif status == 'ERROR':
+            return ('orange', 'lightsalmon')  # Light orange
+        else:
+            return ('black', 'white')
+
+    # Read each sheet and convert to HTML with custom formatting
+    html_tables = {}
+    summary_tables = {}
+    for sheet_name in sheet_names:
+        dataFrame = excel_file.parse(sheet_name)
+
+        # Replace NaN values with blank cells
+        dataFrame = dataFrame.fillna('')
+
+        # Apply formatting to "Status" columns
+        for col in dataFrame.columns:
+            if col.startswith('Status'):
+                dataFrame.loc[8:, col] = dataFrame.loc[7:, col].apply(lambda x: f'<span style="color: {apply_formatting(x)[0]}">{x}</span>')
+
+        # Apply formatting to "Result" column
+        if 'Result' in dataFrame.columns:
+            dataFrame['Result'] = dataFrame['Result'].apply(lambda x: f'<div class="{x.lower()}">{x}</div>')
+
+        # Convert DataFrame to HTML Tables
+        if analysis_type == "New":
+            summary_table = dataFrame.iloc[:8, 1:].to_html(index=False, header=False)
+        else:
+            summary_table = dataFrame.iloc[:8, 1:-1].to_html(index=False, header=False)
+        summary_table = summary_table.replace('<table border="1" class="dataframe">', '<table border="1" class="table2">')
+        summary_tables[sheet_name] = summary_table
+
+        html_table = dataFrame.iloc[8:].to_html(escape=False, index=False, border=1)
+        html_table = html_table.replace('<table border="1" class="dataframe">', '<table id="Main_Table" border="1" class="dataframe">')
+        html_tables[sheet_name] = html_table
+
+    # Apply styling to the html table
+    css_style = """
+    <style>
+        .dataframe {
+            border-collapse: collapse;
+            border: 1px solid black;
+            font-weight: bold;
+        }
+        .input-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+        h1 {
+            text-align: center;
+        }
+        select {
+            font-size: 16px;
+        }
+        th {
+            border: 1px solid black;
+            padding: 8px;
+            background-color: #add8e6;
+            font-size: 20px;
+            text-align: center;
+        }
+        td {
+            border: 1px solid black;
+            padding: 8px;
+        }
+        td:has(> div[class="diff"]) {
+            color: white;
+            background-color: orange;
+        }
+        td:has(> div[class="solved"]) {
+            color: white;
+            background-color: green;
+        }
+        td:has(> div[class="regression"]) {
+            color: white;
+            background-color: red;
+        }
+        .table1 {
+            border-collapse: collapse;
+            border: 1px solid black;
+            font-weight: bold;
+        }
+        .table1 td {
+            width: 100px;
+            text-align: center;
+        }
+        .table2 {
+            border-collapse: collapse;
+            border: 1px solid black;
+            font-weight: bold;
+        }
+        .table2 td {
+            width: 100px;
+            text-align: center;
+            border: 1px solid black;
+            background-color: #f0e3ce;
+        }
+        a {
+            text-decoration: none;
+            color: #023E8A;
+        }
+        a:hover {
+            color: #00B4D8;
+        }
+    </style>
+    """
+
+    # JavaScript code to handle dropdown menu selection and filter the table
+    js_script = """
+    <script>
+        const resultDropdown = document.getElementById("result-dropdown");
+        const statusDropdown = document.getElementById("status-dropdown");
+        const statusOneDropdown = document.getElementById("status1-dropdown");
+        const rows = Main_Table.getElementsByTagName("tr");
+
+        const resultColumnIndexes = {
+            "result-dropdown": 5,
+            "status-dropdown": 1,
+            "status1-dropdown": 3,
+        }
+
+        const resetDropdowns = (id) => {
+            id === resultDropdown?.id ? null : resultDropdown.value = "All"
+            id === statusDropdown?.id ? null : statusDropdown.value = "All"
+            id === statusOneDropdown?.id ? null : statusOneDropdown.value = "All"
+        }
+
+        const filterValues = (event) => {
+            const columnIndex = resultColumnIndexes[event.target.id]
+            const selectedValue = event.target.value
+
+            for (let i = 1; i < rows.length; i++) {
+                const cells = rows[i].getElementsByTagName("td");
+                const resultCell = cells[columnIndex];
+                const resultText = resultCell.textContent || resultCell.innerText;
+
+                if (selectedValue === "All" || resultText === selectedValue) {
+                    rows[i].style.display = "";
+                } else {
+                    rows[i].style.display = "none";
+                }
+            }
+            resetDropdowns(event.target.id)
+        }
+
+        resultDropdown?.addEventListener("input", filterValues);
+        statusOneDropdown?.addEventListener("input", filterValues);
+        statusDropdown?.addEventListener("input", filterValues);
+    </script>
+    """
+
+    # Dropdown menu HTML code
+    dropdown_result = """
+    <div>
+        <label for="result-dropdown">Result:</label>
+        <select id="result-dropdown">
+            <option value="All">All</option>
+            <option value="REGRESSION">REGRESSION</option>
+            <option value="SOLVED">SOLVED</option>
+            <option value="DIFF">DIFF</option>
+        </select>
+    </div>
+    """
+
+    dropdown_status = """
+    <div>
+        <label for="status-dropdown">Status:</label>
+        <select id="status-dropdown">
+            <option value="All">All</option>
+            <option value="PASS">PASS</option>
+            <option value="FAIL">FAIL</option>
+            <option value="ERROR">ERROR</option>
+            <option value="SKIP">SKIP</option>
+            <option value="CANCEL">CANCEL</option>
+            <option value="INTERRUPT">INTERRUPT</option>
+        </select>
+    </div>
+    """
+
+    dropdown_status1 = """
+    <div>
+        <label for="status1-dropdown">Status.1:</label>
+        <select id="status1-dropdown">
+            <option value="All">All</option>
+            <option value="PASS">PASS</option>
+            <option value="FAIL">FAIL</option>
+            <option value="ERROR">ERROR</option>
+            <option value="SKIP">SKIP</option>
+            <option value="CANCEL">CANCEL</option>
+            <option value="INTERRUPT">INTERRUPT</option>
+        </select>
+    </div>
+    """
+
+    quick_summary = f"""
+        <div class="input-container">
+            <table class="table1">
+                <tr>
+                    <td><div class="regression">REGRESSION</div></td>
+                    <td><div class="solved">SOLVED</div></td>
+                    <td><div class="diff">DIFF</div></td>
+                </tr>
+                <tr>
+                    <td>{summary["Regression"]}</td>
+                    <td>{summary["Solved"]}</td>
+                    <td>{summary["Diff"]}</td>
+                </tr>
+            </table>
+        </div>
+    """
+
+    # Save combined HTML table with JavaScript to 'Analysis.html'
+    with open('Analysis.html', 'w') as file:
+        file.write(css_style)
+        file.write('<h1>Analysis</h1>')
+
+        if analysis_type == "Comparison":
+            file.write(quick_summary)
+
+        file.write('<br><div class="input-container">')
+        file.write(dropdown_status)
+        if analysis_type == "Comparison":
+            file.write(dropdown_status1)
+            file.write(dropdown_result)
+        file.write('</div><br>')
+
+        file.write('<br><div class="input-container">')
+        for sheet_name, summary_table in summary_tables.items():
+            file.write(summary_table)
+        file.write('</div><br>')
+
+        file.write('<br><div class="input-container">')
+        for sheet_name, html_table in html_tables.items():
+            file.write(html_table)
+        file.write(js_script)
+        file.write('</div><br>')
+
+
 def main():
     try:
         if "--new-analysis" in sys.argv:
@@ -222,13 +526,6 @@ def main():
                 data = json.load(json_file)
             test_analysis(data)
             deco("Analysis.xlsx")
-
-        elif "--add-to-existing" in sys.argv:
-            with open(sys.argv[-1], 'r') as json_file:
-                data = json.load(json_file)
-            excel = sys.argv[-2]
-            comparison_analysis(excel, data)
-            deco(excel)
 
         elif "--compare-two-results" in sys.argv:
             with open(sys.argv[-2], 'r') as json_file:
@@ -252,7 +549,6 @@ def main():
 
 def usage():
     return ("python3 analysis.py --new-analysis <json_file>\n\
-python3 analysis.py --add-to-existing <xlsx_file> <json_file>\n\
 python3 analysis.py --compare-two-results <old_json_file> <new_json_file>\n")
 
 
