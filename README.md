@@ -297,7 +297,7 @@ So, if such tests are identified and need to be "not run" for a particular envir
 -----
 
 ### Analysis of results:
-analysis.py script is used to simplify analysis/comparison of avocado test runs by generating an excel file (.xlsx) of the same. The results.json file which gets created after avocado run, is passed as input in command line. Depending on the flag/options provided, the excel sheet will be generated.
+analysis.py script is used to simplify analysis/comparison of avocado test runs by generating excel and html files (.xlsx and .html) of the same. The results.json file which gets created after avocado run, is passed as input in command line. Depending on the flag/options provided, the excel sheet will be generated.
 
 > `$ python3 analysis.py [--options] [input(s)]`
 
@@ -316,7 +316,9 @@ analysis.py script is used to simplify analysis/comparison of avocado test runs 
     > `$ python3 analysis.py --new-analysis [json_file]`
 
 2. `--add-to-existing`:
-    > This flag is used to append new results.json dat to an already existing excel file. This flag can be used to compare new runs with the previous runs so that we can have our own analysis.
+    > Work in Progress (Future Enhancement)
+
+    > This flag is used to append new results.json data to an already existing excel file. This flag can be used to compare mutliple new runs with the previous runs so that we can have our own analysis.
 
     > `$ python3 analysis.py --add-to-existing [xlsx_file] [json_file]`
 
