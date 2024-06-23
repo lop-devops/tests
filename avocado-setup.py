@@ -51,6 +51,9 @@ LOG_DIR = "%s/results" % BASE_PATH
 logger = logger_init(filepath=BASE_PATH).getlogger()
 prescript_dir = CONFIGFILE.get('script-dir', 'prescriptdir')
 postscript_dir = CONFIGFILE.get('script-dir', 'postscriptdir')
+args = None
+outputdir = ''
+pipManager = None
 
 
 class TestSuite():
@@ -673,7 +676,7 @@ if __name__ == '__main__':
         bootstraped = True
 
     if args.run_tests:
-        with open("%s/host/dynamic_test_suite" % TEST_CONF_PATH+".cfg","w+") as fp:
+        with open("%s/host/dynamic_test_suite" % TEST_CONF_PATH+".cfg", "w+") as fp:
             fp.write('\n'.join(args.run_tests.split(",")))
         args.run_suite = str(args.run_suite)+","+"host_dynamic_test_suite"
 

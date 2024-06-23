@@ -42,7 +42,8 @@ def get_domains():
         return list(set(domains))
     return []
 
-def  is_nvmf():
+
+def is_nvmf():
     """
     Verify if nvmf is configured
 
@@ -54,6 +55,7 @@ def  is_nvmf():
         return True
     else:
         return False
+
 
 def list_fc_host_names(pci_domain):
     """
@@ -88,6 +90,7 @@ def list_fc_host_names(pci_domain):
         logger.debug("Error while traversing PCI domain %s", pci_domain)
         return []
 
+
 def list_nvmf_fc_node_names(host_names):
     """
     For every FC hostnames find the node_name
@@ -116,6 +119,7 @@ def list_nvmf_fc_node_names(host_names):
 
     return node_names
 
+
 def list_nvmf_nvme_names(node_names):
     """
     In the nvme list-subsystem output find the nvme host specific to FC  node names
@@ -126,7 +130,6 @@ def list_nvmf_nvme_names(node_names):
     """
     nvme_names = []
     lines = runcmd('nvme list-subsys')[1].splitlines()
-
     for line in lines:
         for word in node_names:
             if re.search(word, line):
@@ -134,6 +137,7 @@ def list_nvmf_nvme_names(node_names):
                 nvme_names.append(parts[1])
 
     return nvme_names
+
 
 def list_nvmf_disks(nvme_names):
     """
@@ -154,6 +158,7 @@ def list_nvmf_disks(nvme_names):
                 nvmf_disks.append(parts[0])
     return nvmf_disks
 
+
 def get_pci_addresses():
     """
     Gets list of PCI addresses in the system.
@@ -166,6 +171,7 @@ def get_pci_addresses():
         if not get_pci_prop(line.split()[0], 'Class').startswith('06'):
             addresses.append(line.split()[0])
     return addresses
+
 
 def get_num_interfaces_in_pci(dom_pci_address):
     """
@@ -186,6 +192,7 @@ def get_num_interfaces_in_pci(dom_pci_address):
                 count += 1
     return count
 
+
 def get_disks_in_pci_address(pci_address):
     """
     Gets disks in a PCI address.
@@ -202,6 +209,7 @@ def get_disks_in_pci_address(pci_address):
             disk_list.append(os.path.abspath(os.path.join(disks_path, link)))
     return disk_list
 
+
 def get_disks_in_interface(interface):
     """
     Gets disks in a PCI interface.
@@ -217,6 +225,7 @@ def get_disks_in_interface(interface):
         if "/%s/" % interface in link:
             disk_list.append('/dev/%s' % dev)
     return disk_list
+
 
 def get_multipath_wwids(disks_list):
     """
@@ -240,6 +249,7 @@ def get_multipath_wwids(disks_list):
                 existing_wwids.append(line.split('/')[1])
     return [mpath for mpath in list(set(wwid_list)) if mpath in existing_wwids]
 
+
 def get_multipath_disks(wwids_list):
     """
     Get mpath disk names for given wwids
@@ -254,6 +264,7 @@ def get_multipath_disks(wwids_list):
         mpath_list.append("/dev/mapper/%s" % disk)
     return mpath_list
 
+
 def get_root_disks():
     """
     Gets the PCI address of the root disk.
@@ -267,6 +278,7 @@ def get_root_disks():
             root_disk.append('/dev/%s' % line.split()[0])
     return root_disk
 
+
 def get_nics_in_pci_address(pci_address):
     """
     Gets network interface(nic) in a PCI address.
@@ -276,6 +288,7 @@ def get_nics_in_pci_address(pci_address):
     :return: list of network interfaces in a PCI address.
     """
     return get_interfaces_in_pci_address(pci_address, "net")
+
 
 def get_interfaces_in_pci_address(pci_address, pci_class):
     """
@@ -297,6 +310,7 @@ def get_interfaces_in_pci_address(pci_address, pci_class):
             if pci_address in os.readlink(os.path.join(pci_class_path,
                                                        interface))]
 
+
 def get_pci_class_name(pci_address):
     """
     Gets PCI class name for given PCI bus address
@@ -316,6 +330,7 @@ def get_pci_class_name(pci_address):
         return ""
     return pci_class_dic.get(pci_class_id)
 
+
 def get_pci_type(pci_address):
     """
     Gets PCI type for given PCI bus address
@@ -334,6 +349,7 @@ def get_pci_type(pci_address):
     if pci_class_id not in pci_class_dic:
         return ""
     return pci_class_dic.get(pci_class_id)
+
 
 def get_firmware(pci_address):
     """
@@ -506,6 +522,7 @@ def get_pci_name(pci_address):
         return " ".join(pci_name)
     return ""
 
+
 def get_driver(adapter_type, pci_address):
     """
     Gets the kernel driver in use of given PCI address. (first match only)
@@ -532,6 +549,7 @@ def get_driver(adapter_type, pci_address):
                 return line.rsplit(None, 1)[-1]
     return ""
 
+
 def ioa_details():
     """
     Gets the IPR IOA details and returns
@@ -555,7 +573,8 @@ def ioa_details():
                         r_serial = line.split()[-1]
                     if line.startswith('Current Dual Adapter State'):
                         status = line.split()[-1]
-                ioas.append({'ioa': ioa, 'pci': pci, 'serial': serial, 'r_serial': r_serial, 'status': status})
+                ioas.append({'ioa': ioa, 'pci': pci, 'serial': serial,
+                            'r_serial': r_serial, 'status': status})
     return ioas
 
 
@@ -571,6 +590,7 @@ def get_primary_ioa(pci_address):
         if pci_address in ioa_detail['pci'] and 'Primary' in ioa_detail['status']:
             return ioa_detail['ioa']
     return ''
+
 
 def get_multipath_nvmf_wwids():
     """
@@ -591,6 +611,7 @@ def get_multipath_nvmf_wwids():
             wwid_list.extend(wwid_matches)
 
     return wwid_list
+
 
 def get_secondary_ioa(primary_ioa):
     """
@@ -648,7 +669,8 @@ def pci_info(pci_addrs, pci_type='', pci_blocklist='', type_blocklist=''):
         pci_dic['class'] = get_pci_class_name(pci_dic['functions'][0])
         pci_dic['interfaces'] = []
         for fun in pci_dic['functions']:
-            pci_dic['interfaces'].extend(get_interfaces_in_pci_address(fun, pci_dic['class']))
+            pci_dic['interfaces'].extend(
+                get_interfaces_in_pci_address(fun, pci_dic['class']))
         pci_dic['disks'] = []
         pci_dic['mpath_wwids'] = []
         pci_dic['mpath_disks'] = []
@@ -656,7 +678,8 @@ def pci_info(pci_addrs, pci_type='', pci_blocklist='', type_blocklist=''):
             pci_dic['adapter_type'] = 'nvmf'
             if is_rhel8():
                 pci_dic['mpath_wwids'] = get_multipath_nvmf_wwids()
-                pci_dic['mpath_disks'] = get_multipath_disks(pci_dic['mpath_wwids'])
+                pci_dic['mpath_disks'] = get_multipath_disks(
+                    pci_dic['mpath_wwids'])
                 pci_dic['disks'] = pci_dic['mpath_disks']
             else:
                 pci_val = ':'.join(pci_addr.split(':')[:2])
@@ -667,12 +690,14 @@ def pci_info(pci_addrs, pci_type='', pci_blocklist='', type_blocklist=''):
             pci_dic['disks'] = list(set(pci_dic['disks']))
         if pci_dic['class'] == 'scsi_host' and not pci_dic['adapter_type'] == 'nvmf':
             pci_dic['mpath_wwids'] = get_multipath_wwids(pci_dic['disks'])
-            pci_dic['mpath_disks'] = get_multipath_disks(pci_dic['mpath_wwids'])
+            pci_dic['mpath_disks'] = get_multipath_disks(
+                pci_dic['mpath_wwids'])
             pci_dic['disks'] = pci_dic['mpath_disks']
         pci_dic['pci_root'] = pci_addr
         pci_dic['adapter_description'] = get_pci_name(pci_dic['functions'][0])
         pci_dic['adapter_id'] = get_pci_id(pci_dic['functions'][0])
-        pci_dic['driver'] = get_driver(pci_dic['adapter_type'], pci_dic['functions'][0])
+        pci_dic['driver'] = get_driver(
+            pci_dic['adapter_type'], pci_dic['functions'][0])
         pci_dic['slot'] = get_slot_from_sysfs(pci_dic['functions'][0])
         if pci_dic['adapter_type'] in type_blocklist:
             continue
@@ -682,11 +707,13 @@ def pci_info(pci_addrs, pci_type='', pci_blocklist='', type_blocklist=''):
         pci_dic['infiniband_interfaces'] = []
         if pci_dic['adapter_type'] == 'infiniband':
             for fun in pci_dic['functions']:
-                pci_dic['infiniband_interfaces'].extend(get_interfaces_in_pci_address(fun, 'infiniband'))
+                pci_dic['infiniband_interfaces'].extend(
+                    get_interfaces_in_pci_address(fun, 'infiniband'))
         if pci_dic['adapter_type'] == 'raid':
             for fun in pci_dic['functions']:
                 pci_dic['primary_ioa'] = get_primary_ioa(fun)
-                pci_dic['secondary_ioa'] = get_secondary_ioa(pci_dic['primary_ioa'])
+                pci_dic['secondary_ioa'] = get_secondary_ioa(
+                    pci_dic['primary_ioa'])
         pci_dic['is_root_disk'] = False
         for disk in pci_dic['disks']:
             for root_disk in root_disks:

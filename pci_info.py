@@ -34,6 +34,7 @@ BASE_INPUTFILE_PATH = "%s/config/inputs" % BASE_PATH
 input_path = "io_input.txt"
 INPUTFILE = configparser.ConfigParser()
 INPUTFILE.optionxform = str
+args = None
 
 logger = logger_init(filepath=BASE_PATH).getlogger()
 
@@ -48,7 +49,8 @@ def create_config(pci_list):
     additional_params = args.add_params.split()
     for pci in pci_list:
         if pci['is_root_disk']:
-            logger.debug("ignoring pci address %s as it contains root disk", pci['pci_root'])
+            logger.debug(
+                "ignoring pci address %s as it contains root disk", pci['pci_root'])
             continue
 
         # copy template cfg files and create new ones
@@ -56,15 +58,19 @@ def create_config(pci_list):
         if pci['adapter_type'] == 'nvmf' and is_rhel8():
             orig_cfg = "io_%s_rhel8_fvt" % pci['adapter_type']
             new_cfg = "io_%s_rhel8_%s_fvt" % (pci['adapter_type'], cfg_name)
-            inputfile = "%s/io_%s_rhel8_input.txt" % (BASE_INPUTFILE_PATH, pci['adapter_type'])
+            inputfile = "%s/io_%s_rhel8_input.txt" % (
+                BASE_INPUTFILE_PATH, pci['adapter_type'])
         else:
             orig_cfg = "io_%s_fvt" % pci['adapter_type']
             new_cfg = "io_%s_%s_fvt" % (pci['adapter_type'], cfg_name)
-            inputfile = "%s/io_%s_input.txt" % (BASE_INPUTFILE_PATH, pci['adapter_type'])
+            inputfile = "%s/io_%s_input.txt" % (
+                BASE_INPUTFILE_PATH, pci['adapter_type'])
         if not os.path.exists("config/tests/host/%s.cfg" % orig_cfg):
-            logger.debug("ignoring pci address %s as there is no cfg for %s", pci['pci_root'], pci['adapter_type'])
+            logger.debug("ignoring pci address %s as there is no cfg for %s",
+                         pci['pci_root'], pci['adapter_type'])
             continue
-        shutil.copy("config/tests/host/%s.cfg" % orig_cfg, "config/tests/host/%s.cfg" % new_cfg)
+        shutil.copy("config/tests/host/%s.cfg" %
+                    orig_cfg, "config/tests/host/%s.cfg" % new_cfg)
         test_suites.append("host_%s" % new_cfg)
 
         # adding info to input file
@@ -106,7 +112,7 @@ def create_config(pci_list):
                         value = pci[index][int(index_exact)]
                         if len(pci[index]) > 1 and not key == 'pci_device':
                             del pci[index][int(index_exact)]
-                #remove the duplicate inputfile enteries
+                # remove the duplicate inputfile enteries
                 if key in inputfile_dict:
                     del inputfile_dict[key]
                 INPUTFILE.set(new_cfg, key, "\"%s\"" % value)
@@ -128,7 +134,7 @@ def create_config(pci_list):
             if key in inputfile_dict:
                 inputfile_dict[key] = param.split('=')[1]
             else:
-            #if it is completly new then directly write to new input file
+                # if it is completly new then directly write to new input file
                 value = param.split('=')[1]
                 INPUTFILE.set(new_cfg, key, "\"%s\"" % value)
 
@@ -146,7 +152,8 @@ def create_config(pci_list):
 
     # generate avocado-setup command line
     if test_suites:
-        cmd = "python avocado-setup.py --run-suite %s %s" % (test_suites, input_file_string)
+        cmd = "python avocado-setup.py --run-suite %s %s" % (
+            test_suites, input_file_string)
         return cmd
     return ""
 
@@ -179,9 +186,11 @@ if __name__ == '__main__':
                         help='Additional parameters(key=value) to the input file, space separated')
     args = parser.parse_args()
     if args.pci_addr:
-        pci_details = pci.pci_info(args.pci_addr, pci_type=args.pci_type, pci_blocklist=args.pci_addr_blocklist, type_blocklist=args.type_blocklist)
+        pci_details = pci.pci_info(args.pci_addr, pci_type=args.pci_type,
+                                   pci_blocklist=args.pci_addr_blocklist, type_blocklist=args.type_blocklist)
     else:
-        pci_details = pci.all_pci_info(pci_type=args.pci_type, pci_blocklist=args.pci_addr_blocklist, type_blocklist=args.type_blocklist)
+        pci_details = pci.all_pci_info(
+            pci_type=args.pci_type, pci_blocklist=args.pci_addr_blocklist, type_blocklist=args.type_blocklist)
     if not pci_details:
         logger.info("No PCI Found")
         sys.exit(0)

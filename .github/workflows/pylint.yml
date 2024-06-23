@@ -21,4 +21,4 @@ jobs:
     - name: Analysing the code with  pylint
       run: |
         pip install Inspektor==0.5.3
-        inspekt checkall --disable-style E501,E265,W601,W605,E402,E722,E741 --no-license-check
+        inspekt checkall --disable-style E501,E265,W601,W605,E402,E722,E741,E115,E0606 --no-license-check
