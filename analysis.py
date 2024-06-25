@@ -71,7 +71,8 @@ def test_analysis(data):
 
     # Loop through the 'tests' list in the JSON data and add rows
     for i, test in enumerate(data['tests']):
-        dataframe.loc[i + 8] = [test['name'], test['status'], test['fail_reason']]
+        dataframe.loc[i + 8] = [test['name'],
+                                test['status'], test['fail_reason']]
 
     # Save the DataFrame to a Excel file
     dataframe.to_excel('Analysis.xlsx', index=False)
@@ -111,7 +112,8 @@ def comparison_analysis(excel, data):
         found = 0
         for j in range(len(test_names)):
             if test['name'] == test_names[j]:
-                new_dataframe.loc[j + 8] = [test['status'], test['fail_reason']]
+                new_dataframe.loc[j + 8] = [test['status'],
+                                            test['fail_reason']]
                 found = 1
                 break
         if found == 0:
@@ -119,7 +121,8 @@ def comparison_analysis(excel, data):
             for i in range(len(old_dataframe.columns)-1):
                 new.append("")
             old_dataframe.loc[len(old_dataframe.index)] = new
-            new_dataframe.loc[len(old_dataframe.index)-1] = [test['status'], test['fail_reason']]
+            new_dataframe.loc[len(old_dataframe.index) -
+                              1] = [test['status'], test['fail_reason']]
 
     final_res = pd.concat([old_dataframe, new_dataframe], axis=1)
     final_res.to_excel(excel, index=False)
@@ -179,7 +182,8 @@ def deco(excel):
         for cell in row:
             cell.font = Font(size=15)
             cell.border = Border(left=Side(border_style='thin', color='000000'),
-                                 right=Side(border_style='thin', color='000000'),
+                                 right=Side(border_style='thin',
+                                            color='000000'),
                                  top=Side(border_style='thin', color='000000'),
                                  bottom=Side(border_style='thin', color='000000'))
             cell.alignment = Alignment(wrap_text=True, vertical='center')
@@ -187,18 +191,23 @@ def deco(excel):
     # Apply header formatting
     for cell in worksheet[1]:
         cell.font = Font(size=18, bold=True)  # White text color
-        cell.fill = PatternFill(start_color='ADD8E6', end_color='ADD8E6', fill_type='solid')  # Blue background color
+        # Blue background color
+        cell.fill = PatternFill(start_color='ADD8E6',
+                                end_color='ADD8E6', fill_type='solid')
 
     # Conditional formatting for the "Result" column if present
     try:
         for idx, value in enumerate(dataframe['Result'], start=2):
             cell = worksheet.cell(row=idx, column=6)
             if value == 'DIFF':
-                cell.fill = PatternFill(start_color='FF0000', end_color='FF0000', fill_type='solid')  # Red
+                cell.fill = PatternFill(
+                    start_color='FF0000', end_color='FF0000', fill_type='solid')  # Red
             elif value == 'SOLVED':
-                cell.fill = PatternFill(start_color='39E75F', end_color='39E75F', fill_type='solid')  # Green
+                cell.fill = PatternFill(
+                    start_color='39E75F', end_color='39E75F', fill_type='solid')  # Green
             elif value == 'REGRESSION':
-                cell.fill = PatternFill(start_color='FFA500', end_color='FFA500', fill_type='solid')  # Orange
+                cell.fill = PatternFill(
+                    start_color='FFA500', end_color='FFA500', fill_type='solid')  # Orange
     except Exception as e:
         pass
 
