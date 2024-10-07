@@ -236,6 +236,10 @@ class PipMagager:
                     self.install_packages.append("%s==%s" % (item[0], item[1]))
             else:
                 self.install_packages.append(item[0])
+        self.cmdfix=''
+        pip_output = subprocess.check_output(['pip', '--version']).decode('utf-8').strip().split()[1]
+        if float(".".join(pip_output.split(".")[:2])) >= 21.3:
+            self.cmdfix="--break-system-packages"
 
     def install(self):
         if os.geteuid() != 0:
@@ -243,15 +247,15 @@ class PipMagager:
         else:
             pip_installcmd = '%s install -U' % self.pip_cmd
         for package in self.install_packages:
-            cmd = '%s %s --break-system-packages' % (pip_installcmd, package)
+            cmd = '%s %s %s' % (pip_installcmd, package, self.cmdfix)
             runcmd(cmd,
                    err_str='Package installation via pip failed: package  %s' % package,
                    debug_str='Installing python package %s using pip' % package)
 
     def uninstall(self):
         for package in self.uninstall_packages:
-            cmd = "%s uninstall %s --break-system-packages -y \
-                    --disable-pip-version-check" % (self.pip_cmd, package)
+            cmd = "%s uninstall %s %s -y \
+                    --disable-pip-version-check" % (self.pip_cmd, package, self.cmdfix)
             runcmd(cmd, ignore_status=True,
                    err_str="Error in removing package: %s" % package,
                    debug_str="Uninstalling %s" % package)
