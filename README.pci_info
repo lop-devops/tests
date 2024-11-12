@@ -11,12 +11,18 @@ optional arguments:
   -h, --help            show this help message and exit
   --pci-address PCI_ADDR
                         pci address, comma separated
+  --vnic vNIC_INT
+                        vNIC interface name
+  --veth vETH_INT
+                        vETH interface name
+  --hnv  HNV_INT
+                        HNV interface name
+
   --show-info           Show the pci details
   --create-config       Create test config and input files
   --additional-params ADD_PARAMS
                         Additional parameters(key=value) to the input file,
                         space separated
-
 
 
 ARGUMENT DETAILS:
@@ -26,6 +32,21 @@ ARGUMENT DETAILS:
     Use this option to specify for which pci address the details should be collected.
     Use comma separated values to provide multiple pci addresses.
     If not provided, collects details for all pci addresses in the system.
+
+
+    --vnic vNIC_INT
+    Use this option to specify for which vNIC interface the details should be collected.
+    If "vNIC_INT" not provided, then the first available vNIC interface from system will be used by default.
+
+
+    --veth vETH_INT
+    Use this option to specify for which vETH interface the details should be collected.
+    If "vETH_INT" not provided, then the first available vETH interface from system will be used by default.
+
+
+    --hnv HNV_INT
+    Use this option to specify for which vHNV interface the details should be collected.
+    If "HNV_INT" not provided, then the first available HNV interface from system will be used by default.
 
 
     --pci-address-blocklist PCI_ADDR_BLOCKLIST
@@ -53,7 +74,7 @@ ARGUMENT DETAILS:
     Option to create config file if required.
     Suppose the system has one pci card, which is nvme: Then, a cfg file named
     io_nvme_<pci_address>_fvt.cfg is generated in config/tests/host/
-    
+
     It also generates input file (Check --input-file section of main README).
     The details for input file is got via config file at config/wrapper/pci_input_cfg.txt
     The details are dynamic, and the dictionary values can be used to edit the input config
@@ -88,78 +109,138 @@ ARGUMENT DETAILS:
         --additional-params "0005:60:00::a=b c=d"
         a = b is only for the specified pci address, and c = d is for all test configs.
 
+    Additional params for virtual interfaces is supported, if they are provided key=value
+    pair, separated by ",".
+
+    Example:
+       --additional-params device_ip=192.168.100.184,peer_ip=192.168.100.104,netmask=255.255.255.0,
+         peer_ips="192.168.100.104 192.168.110.104",peer_interfaces="env4 env5"
 
 
-EXAMPLE:
---------
-# ./pci_info.py --pci-address "0202:60:00,0102:60:00" --show-info
+EXAMPLES:
+---------
+A. For pci devices
+++++++++++++++++++
 
-[{'adapter_description': 'Emulex Corporation Lancer Gen6: LPe32000 Fibre Channel Host Adapter',
-  'adapter_id': '10df:e300:1014:0615',
-  'adapter_type': 'fc',
-  'class': 'scsi_host',
-  'disks': ['/dev/sdaa',
-            '/dev/sdab',
-            '/dev/sdx',
-            '/dev/sdy',
-            '/dev/sdg',
-            '/dev/sdd',
-            '/dev/sde',
-            '/dev/sdc'],
-  'driver': 'lpfc',
-  'firmware': '11.4.415.5',
-  'functions': ['0102:60:00.0', '0102:60:00.1'],
-  'interfaces': ['host11', 'host13'],
-  'is_root_disk': False,
-  'mpath_disks': [],
-  'mpath_wwids': [],
-  'pci_root': '0102:60:00',
-  'slot': 'U78CD.001.FZHV738-P1-C2'},
- {'adapter_description': 'QLogic Corp. ISP2532-based 8Gb Fibre Channel to PCI Express HBA',
-  'adapter_id': '1077:2532:1014:f304',
-  'adapter_type': 'fc',
-  'class': 'scsi_host',
-  'disks': ['/dev/sdbu',
-            '/dev/sdbt',
-            '/dev/sdbv',
-            '/dev/sdbq',
-            '/dev/sdar',
-            '/dev/sdas',
-            '/dev/sdz',
-            '/dev/sdj'],
-  'driver': 'qla2xxx',
-  'firmware': '8.07.00',
-  'functions': ['0202:60:00.0', '0202:60:00.1'],
-  'interfaces': ['host17', 'host15'],
-  'is_root_disk': False,
-  'mpath_disks': ['/dev/mapper/mpathac',
-                  '/dev/mapper/mpathae'],
-  'mpath_wwids': ['360050768028383d7f0000000000000a5',
-                  '360050768028383d7f000000000000033'],
-  'pci_root': '0202:60:00',
-  'slot': 'U78CD.001.FZHV738-P2-C2'}]
+    # ./pci_info.py --pci-address "0202:60:00,0102:60:00" --show-info
+
+    [{'adapter_description': 'Emulex Corporation Lancer Gen6: LPe32000 Fibre Channel Host Adapter',
+    'adapter_id': '10df:e300:1014:0615',
+    'adapter_type': 'fc',
+    'class': 'scsi_host',
+    'disks': ['/dev/sdaa',
+                '/dev/sdab',
+                '/dev/sdx',
+                '/dev/sdy',
+                '/dev/sdg',
+                '/dev/sdd',
+                '/dev/sde',
+                '/dev/sdc'],
+    'driver': 'lpfc',
+    'firmware': '11.4.415.5',
+    'functions': ['0102:60:00.0', '0102:60:00.1'],
+    'interfaces': ['host11', 'host13'],
+    'is_root_disk': False,
+    'mpath_disks': [],
+    'mpath_wwids': [],
+    'pci_root': '0102:60:00',
+    'slot': 'U78CD.001.FZHV738-P1-C2'},
+    {'adapter_description': 'QLogic Corp. ISP2532-based 8Gb Fibre Channel to PCI Express HBA',
+    'adapter_id': '1077:2532:1014:f304',
+    'adapter_type': 'fc',
+    'class': 'scsi_host',
+    'disks': ['/dev/sdbu',
+                '/dev/sdbt',
+                '/dev/sdbv',
+                '/dev/sdbq',
+                '/dev/sdar',
+                '/dev/sdas',
+                '/dev/sdz',
+                '/dev/sdj'],
+    'driver': 'qla2xxx',
+    'firmware': '8.07.00',
+    'functions': ['0202:60:00.0', '0202:60:00.1'],
+    'interfaces': ['host17', 'host15'],
+    'is_root_disk': False,
+    'mpath_disks': ['/dev/mapper/mpathac',
+                    '/dev/mapper/mpathae'],
+    'mpath_wwids': ['360050768028383d7f0000000000000a5',
+                    '360050768028383d7f000000000000033'],
+    'pci_root': '0202:60:00',
+    'slot': 'U78CD.001.FZHV738-P2-C2'}]
 
 
-# ./pci_info.py --pci-address "0202:60:00,0102:60:00" --create-config --additional-params "peer_ip=131.1.1.89   peer_interfaces=eth1,eth2"
-peer_ip=131.1.1.89   peer_interfaces=eth1,eth2
-['peer_ip=131.1.1.89', 'peer_interfaces=eth1,eth2']
---run-suite host_io_fc_0102_60_00_fvt,host_io_fc_0202_60_00_fvt --input-file io_input.txt
+    # ./pci_info.py --pci-address "0202:60:00,0102:60:00" --create-config --additional-params "peer_ip=131.1.1.89   peer_interfaces=eth1,eth2"
+    peer_ip=131.1.1.89   peer_interfaces=eth1,eth2
+    ['peer_ip=131.1.1.89', 'peer_interfaces=eth1,eth2']
+    --run-suite host_io_fc_0102_60_00_fvt,host_io_fc_0202_60_00_fvt --input-file io_input.txt
 
+
+    # cat io_input.txt
+    [io_fc_0102_60_00_fvt]
+    disks = ""
+    wwids = ""
+    pci_device = "0102:60:00.0"
+    MODULES = "lpfc"
+    peer_ip = "131.1.1.89"
+    peer_interfaces = "eth1,eth2"
+
+    [io_fc_0202_60_00_fvt]
+    disk = "/dev/mapper/mpathac"
+    disks = "/dev/mapper/mpathac,/dev/mapper/mpathae"
+    wwids = "360050768028383d7f0000000000000a5,360050768028383d7f000000000000033"
+    pci_device = "0202:60:00.0"
+    MODULES = "qla2xxx"
+    peer_ip = "131.1.1.89"
+    peer_interfaces = "eth1,eth2"
+
+
+B. For virtual devices
+++++++++++++++++++++++
+
+# ./pci_info.py --vnic env4 --show-info [ or ] ./pci_info.py --vnic  --show-info
+
+[{'adapter_type': 'vnic',
+  'driver': 'ibmvnic',
+  'interfaces': ['env3', 'env4', 'env8'],
+  'macaddress': 'ba:70:c4:97:1a:04',
+  'public_interface_ip': '9.xxxxx'}]
+
+
+# ./pci_info.py --vnic env4 --create-config
+04:42:56 INFO    : python avocado-setup.py --run-suite host_io_vnic_stress_fvt --input-file io_input.txt
+
+
+
+[io_vnic_stress_fvt]
+host_interfaces = "env3 env4"
+interfaces = "env3 env4"
+bond_interfaces = "env3 env4"
+htx_host_interfaces = "env3 env4"
+host_public_ip = "9xxxx"
+interface = "env3"
+module = "ibmvnic"
+macaddress = "ba:70:c4:97:1a:03"
+
+
+# ./pci_info.py --vnic env4 --additional-params device_ip=192.168.100.184,peer_ip=192.168.100.104,netmask=255.255.255.0,host_ip=192.168.100.184,netmasks=255.255.255.0,peer_ips="192.168.100.104 192.168.110.104",peer_interfaces="env4 env5",hmc_username=hscroot,hmc_pwd=abcd --create-config
 
 # cat io_input.txt
-[io_fc_0102_60_00_fvt]
-disks = ""
-wwids = ""
-pci_device = "0102:60:00.0"
-MODULES = "lpfc"
-peer_ip = "131.1.1.89"
-peer_interfaces = "eth1,eth2"
-
-[io_fc_0202_60_00_fvt]
-disk = "/dev/mapper/mpathac"
-disks = "/dev/mapper/mpathac,/dev/mapper/mpathae"
-wwids = "360050768028383d7f0000000000000a5,360050768028383d7f000000000000033"
-pci_device = "0202:60:00.0"
-MODULES = "qla2xxx"
-peer_ip = "131.1.1.89"
-peer_interfaces = "eth1,eth2"
+[io_vnic_stress_fvt]
+host_interfaces = "env3 env4"
+interfaces = "env3 env4"
+bond_interfaces = "env3 env4"
+htx_host_interfaces = "env3 env4"
+host_public_ip = "9.xxxxx"
+interface = "env3"
+module = "ibmvnic"
+macaddress = "ba:70:c4:97:1a:04"
+hmc_pwd = abcd
+hmc_username = hscroot
+mac_id = "025dc3a7d703"
+host_ip = 192.168.100.184
+netmask = 255.255.255.0
+netmasks = 255.255.255.0
+peer_ips = 192.168.100.104 192.168.110.104
+host_ips = "110.10.10.212 111.10.10.212"
+peer_interfaces = env4 env5
