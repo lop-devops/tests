@@ -24,6 +24,7 @@ import shutil
 import os
 import sys
 import configparser
+from lib.pci import is_sriov
 from lib.logger import logger_init
 from lib.helper import is_rhel8
 
@@ -216,6 +217,11 @@ def create_config(interface_details, config_type):
                 new_cfg = "io_%s_rhel8_%s_fvt" % (pci['adapter_type'], cfg_name)
                 inputfile = "%s/io_%s_rhel8_input.txt" % (
                     BASE_INPUTFILE_PATH, pci['adapter_type'])
+            elif pci['adapter_type'] == 'network' and is_sriov(pci[
+'pci_root']):
+                orig_cfg = "io_nic_sriov_fvt"
+                new_cfg = "io_nic_sriov_%s_fvt" % cfg_name
+                inputfile = "%s/io_nic_sriov_input.txt" % BASE_INPUTFILE_PATH
             else:
                 orig_cfg = "io_%s_fvt" % pci['adapter_type']
                 new_cfg = "io_%s_%s_fvt" % (pci['adapter_type'], cfg_name)

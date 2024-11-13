@@ -633,6 +633,26 @@ def get_secondary_ioa(primary_ioa):
             return ioa_detail['ioa']
     return ''
 
+def is_sriov(pci_address):
+    """
+    Check if interface is a SRIOV virtual interface.
+
+    This method checks if the interface is SRIOV logical interf
+ace or not.
+
+    rtype: bool
+    """
+    iface_name = get_nics_in_pci_address(pci_address)[0]
+    if not os.path.isfile('/sys/class/net/%s/device/vpd' % iface_name):
+        raise NWException("Network interface sysfs file does not exists")
+    cmd = '/sys/class/net/%s/device/vpd' % iface_name
+    with open(cmd, 'rb') as vpdfile:
+        vpdlines = vpdfile.read().split()
+        for vpd in vpdlines:
+            if b'VF' in vpd and vpd.endswith(b'SN'):
+                return True
+    return False
+
 
 def pci_info(pci_addrs, pci_type='', pci_blocklist='', type_blocklist=''):
     """
