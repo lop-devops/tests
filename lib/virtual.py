@@ -99,6 +99,7 @@ def get_hnv_interface_names():
         hnv_interface_list.extend(bond_interfaces)
     else:
         logger.debug("No HNV interfaces found.")
+    return hnv_interface_list
 
 
 def get_host_public_ip():
