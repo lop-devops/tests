@@ -36,21 +36,13 @@ postscript = "%s/config/postscript" % BASE_PATH
 NORUNTEST_PATH = "%s/config/wrapper/no_run_tests.conf" % BASE_PATH
 TEST_CONF_PATH = "%s/config/tests/" % BASE_PATH
 CONFIGFILE = configparser.ConfigParser()
-CONFIGFILE.read(CONFIG_PATH)
 NORUNTESTFILE = configparser.ConfigParser()
-NORUNTESTFILE.read(NORUNTEST_PATH)
 INPUTFILE = configparser.ConfigParser()
 INPUTFILE.optionxform = str
-BASE_FRAMEWORK = eval(CONFIGFILE.get('framework', 'base'))
-KVM_FRAMEWORK = eval(CONFIGFILE.get('framework', 'kvm'))
-OPTIONAL_FRAMEWORK = eval(CONFIGFILE.get('framework', 'optional'))
-TEST_REPOS = eval(CONFIGFILE.get('tests', 'name'))
 TEST_DIR = "%s/tests" % BASE_PATH
 DATA_DIR = "%s/data" % BASE_PATH
 LOG_DIR = "%s/results" % BASE_PATH
 logger = logger_init(filepath=BASE_PATH).getlogger()
-prescript_dir = CONFIGFILE.get('script-dir', 'prescriptdir')
-postscript_dir = CONFIGFILE.get('script-dir', 'postscriptdir')
 args = None
 outputdir = ''
 pipManager = None
@@ -665,8 +657,44 @@ if __name__ == '__main__':
     parser.add_argument('--run-tests', dest="run_tests", action='store',
                         default=None,
                         help="To run the host tests provided in the option and publish result [Note: test names(full path) and separated by comma]")
+    parser.add_argument('--config-env', dest='CONFIG_PATH',
+                    action='store', default=CONFIG_PATH,
+                    help='Specify env config path')
+    parser.add_argument('--config-norun', dest='NORUNTEST_PATH',
+                    action='store', default=NORUNTEST_PATH,
+                    help='Specify no run tests config path')
 
     args = parser.parse_args()
+
+    if args.CONFIG_PATH:
+        if os.path.exists(args.CONFIG_PATH):
+            CONFIGFILE.read(args.CONFIG_PATH)
+            logger.info(f"Env Config: {args.CONFIG_PATH}")
+        else:
+            logger.error(f"Env Config Path: {args.CONFIG_PATH} does not exist")
+            sys.exit(1)
+    else:
+        logger.error(f"Env Config Path: {args.CONFIG_PATH} not defined")
+        sys.exit(1)
+
+    if args.NORUNTEST_PATH:
+        if os.path.exists(args.NORUNTEST_PATH):
+            NORUNTESTFILE.read(args.NORUNTEST_PATH)
+            logger.info(f"No Run Config: {args.NORUNTEST_PATH}")
+        else:
+            logger.error(f"No Run Config Path: {args.NORUNTEST_PATH} does not exist")
+            sys.exit(1)
+    else:
+        logger.error(f"No Run Config Path: {args.NORUNTEST_PATH} not defined")
+        sys.exit(1)
+
+    globals() ['BASE_FRAMEWORK'] = eval(CONFIGFILE.get('framework', 'base'))
+    globals() ['KVM_FRAMEWORK'] = eval(CONFIGFILE.get('framework', 'kvm'))
+    globals() ['OPTIONAL_FRAMEWORK'] = eval(CONFIGFILE.get('framework', 'optional'))
+    globals() ['TEST_REPOS'] = eval(CONFIGFILE.get('tests', 'name'))
+    globals() ['prescript_dir'] = CONFIGFILE.get('script-dir', 'prescriptdir')
+    globals() ['postscript_dir'] = CONFIGFILE.get('script-dir', 'postscriptdir')
+
     if helper.get_machine_type() == 'pHyp':
         args.enable_kvm = False
         if args.run_suite:
