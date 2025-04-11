@@ -511,7 +511,7 @@ def parse_test_config(test_config_file, avocado_bin, enable_kvm):
                 continue
             # split line ignoring quotes used for additional args
             line = shlex.split(line)
-            test_dic['test'] = line[0].strip('$')
+            test_dic['test'] = os.path.join(TEST_DIR, line[0].strip('$'))
             test_dic['name'] = test_dic['test'].split("/")[-1]
             if ":" in test_dic['test'].split("/")[-1]:
                 test_dic['name'] = "%s_%s" % (test_dic['name'].split(".")[0],
