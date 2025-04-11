@@ -210,7 +210,10 @@ def get_repo(repo, basepath):
     :param repo: tuple of repo link and branch(optional)
     :param basepath: base path where the repository has to be downloaded
     """
-    if not repo[1]:
+    if not isinstance(repo, tuple):
+        repo = (repo, '')
+
+    if repo[1] == '':
         branch = "master"
     else:
         branch = repo[1]
@@ -218,14 +221,19 @@ def get_repo(repo, basepath):
     repo_name = repo[0].split('/')[-1].split('.git')[0]
     repo_path = os.path.join(basepath, repo_name)
     cmd_clone = "git clone %s %s" % (repo[0], repo_path)
-    if os.path.isdir(repo_path):
-        cmd = "cd %s && %s" % (repo_path, cmd_update)
+
+    logger.info("\t3. Cloning/Updating the repo: %s with branch %s under %s" % (
+                      repo_name, branch, repo_path))
+    if not os.path.isdir(repo_path):
+        cmd = "%s && cd %s" % (cmd_clone, repo_path)
     else:
-        cmd = "%s && cd %s && %s" % (cmd_clone, repo_path, cmd_update)
-    helper.runcmd(cmd,
-                  info_str="\t3. Cloning/Updating the repo: %s with branch %s under %s" % (
-                      repo_name, branch, repo_path),
-                  err_str="Failed to clone/update %s repository:" % repo_name)
+        cmd = "cd %s && [ %s = \"$(git remote get-url origin)\" ] && echo \"Repo matches\" && exit 0 \" \
+               || echo \"Repo does not match\" && exit 1 \"" % (repo_path, repo[0])
+
+    helper.runcmd(cmd, err_str="Failed to clone %s repository:, Please clean environment" % repo_name)
+
+    cmd = "cd %s && %s" % (repo_path, cmd_update)
+    helper.runcmd(cmd, err_str="Failed to update %s repository:" % repo_name)
 
 
 def create_config(logdir):
