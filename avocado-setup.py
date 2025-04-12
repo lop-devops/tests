@@ -66,7 +66,15 @@ class Result(Enum):
     Warn = "warn"
     Interrupt ="interrupt"
 
+class Testsuite_status(Enum):
+    Total = "Total"
+    Run = "Run"
+    Not_Run = "Not_Run"
+    Cant_Run = "Cant_Run"
+
 count_result = { _.value : 0 for _ in Result}
+count_testsuites_status = { _.value : 0 for _ in Testsuite_status}
+
 class TestSuite():
     """
         Class for Testsuite
@@ -394,11 +402,13 @@ def run_test(testsuite, avocado_bin, nrunner):
         status = int(bin(int(status))[2:].zfill(16)[:-8], 2)
         if status >= 2:
             testsuite.runstatus("Not_Run", "Command execution failed")
+            count_testsuites_status[Testsuite_status.Not_Run.value] += 1
             return
     except Exception as error:
         logger.error("Running testsuite %s failed with error\n%s",
                      testsuite.name, error)
         testsuite.runstatus("Not_Run", "Command execution failed")
+        count_testsuites_status[Testsuite_status.Not_Run.value] += 1
         return
     logger.info('')
     result_link = testsuite.jobdir()
@@ -414,8 +424,10 @@ def run_test(testsuite, avocado_bin, nrunner):
                 result_link += "| %s %s |" % (state.upper(),
                                               str(result_state[state]))
         testsuite.runstatus("Run", "Successfully executed", result_link)
+        count_testsuites_status[Testsuite_status.Run.value] += 1
     else:
         testsuite.runstatus("Not_Run", "Unable to find job log file")
+        count_testsuites_status[Testsuite_status.Not_Run.value] += 1
     return
 
 
@@ -741,6 +753,8 @@ if __name__ == '__main__':
                                                        use_test_dir=args.testdir)
                     Testsuites[test_suite].runstatus("Cant_Run",
                                                      "Config file not present")
+                    count_testsuites_status[Testsuite_status.Cant_Run.value] += 1
+                    Testsuites_list.append(test_suite)
                     continue
                 for test in test_list:
                     for l_key in ['mux', 'args']:
@@ -763,8 +777,10 @@ if __name__ == '__main__':
                 if not Testsuites[test_suite].config():
                     Testsuites[test_suite].runstatus("Cant_Run",
                                                      "Config file not present")
+                    count_testsuites_status[Testsuite_status.Cant_Run.value] += 1
                     continue
         # Run Tests
+        count_testsuites_status[Testsuite_status.Total.value] = len(Testsuites_list)
         for test_suite in Testsuites_list:
             if not Testsuites[test_suite].run == "Cant_Run":
                 run_test(Testsuites[test_suite], avocado_bin, args.nrunner)
@@ -795,6 +811,10 @@ if __name__ == '__main__':
                                                     10),
                                                 Testsuites[test_suite].runsummary))
             summary_output.append(Testsuites[test_suite].runlink)
+
+        summary_output.append("\nTest suites status:\n")
+        for k, val in count_testsuites_status.items():
+            summary_output.append('%s %s' % (k.upper().ljust(20), val))
 
         summary_output.append("\nFinal count summary for tests run:\n")
         for k, val in count_result.items():
