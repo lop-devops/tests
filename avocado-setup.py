@@ -94,7 +94,7 @@ class TestSuite():
         self.test = test
         self.mux = mux
         self.args = args
-        self.run = "Not_Run"
+        self.run = Testsuite_status.Not_Run.value
         self.runsummary = None
         self.runlink = None
         if use_test_dir:
@@ -401,13 +401,13 @@ def run_test(testsuite, avocado_bin, nrunner):
         status = os.system(cmd)
         status = int(bin(int(status))[2:].zfill(16)[:-8], 2)
         if status >= 2:
-            testsuite.runstatus("Not_Run", "Command execution failed")
+            testsuite.runstatus(Testsuite_status.Not_Run.value, "Command execution failed")
             count_testsuites_status[Testsuite_status.Not_Run.value] += 1
             return
     except Exception as error:
         logger.error("Running testsuite %s failed with error\n%s",
                      testsuite.name, error)
-        testsuite.runstatus("Not_Run", "Command execution failed")
+        testsuite.runstatus(Testsuite_status.Not_Run.value, "Command execution failed")
         count_testsuites_status[Testsuite_status.Not_Run.value] += 1
         return
     logger.info('')
@@ -423,10 +423,10 @@ def run_test(testsuite, avocado_bin, nrunner):
                 count_result[state] += int(result_state[state])
                 result_link += "| %s %s |" % (state.upper(),
                                               str(result_state[state]))
-        testsuite.runstatus("Run", "Successfully executed", result_link)
+        testsuite.runstatus(Testsuite_status.Run.value, "Successfully executed", result_link)
         count_testsuites_status[Testsuite_status.Run.value] += 1
     else:
-        testsuite.runstatus("Not_Run", "Unable to find job log file")
+        testsuite.runstatus(Testsuite_status.Not_Run.value, "Unable to find job log file")
         count_testsuites_status[Testsuite_status.Not_Run.value] += 1
     return
 
@@ -751,7 +751,7 @@ if __name__ == '__main__':
                     Testsuites[test_suite] = TestSuite(test_suite, outputdir,
                                                        args.vt_type,
                                                        use_test_dir=args.testdir)
-                    Testsuites[test_suite].runstatus("Cant_Run",
+                    Testsuites[test_suite].runstatus(Testsuite_status.Cant_Run.value,
                                                      "Config file not present")
                     count_testsuites_status[Testsuite_status.Cant_Run.value] += 1
                     Testsuites_list.append(test_suite)
@@ -775,14 +775,14 @@ if __name__ == '__main__':
                                                    use_test_dir=args.testdir)
                 Testsuites_list.append(str(test_suite))
                 if not Testsuites[test_suite].config():
-                    Testsuites[test_suite].runstatus("Cant_Run",
+                    Testsuites[test_suite].runstatus(Testsuite_status.Cant_Run.value,
                                                      "Config file not present")
                     count_testsuites_status[Testsuite_status.Cant_Run.value] += 1
                     continue
         # Run Tests
         count_testsuites_status[Testsuite_status.Total.value] = len(Testsuites_list)
         for test_suite in Testsuites_list:
-            if not Testsuites[test_suite].run == "Cant_Run":
+            if not Testsuites[test_suite].run == Testsuite_status.Cant_Run.value:
                 run_test(Testsuites[test_suite], avocado_bin, args.nrunner)
                 if args.interval:
                     time.sleep(int(args.interval))
