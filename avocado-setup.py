@@ -24,7 +24,7 @@ import shlex
 import argparse
 import configparser
 import binascii
-
+from enum import Enum
 from lib.logger import logger_init
 from lib import helper
 
@@ -56,6 +56,17 @@ outputdir = ''
 pipManager = None
 
 
+class Result(Enum):
+    Testcount = "Total"
+    Pass = "pass"
+    Cancel = "cancel"
+    Error = "errors"
+    Failures = "failures"
+    Skip = "skip"
+    Warn = "warn"
+    Interrupt ="interrupt"
+
+count_result = { _.value : 0 for _ in Result}
 class TestSuite():
     """
         Class for Testsuite
@@ -396,8 +407,10 @@ def run_test(testsuite, avocado_bin, nrunner):
         result_link += "/job.log\n"
         with open(result_json, encoding="utf-8") as filep:
             result_state = json.load(filep)
-        for state in ['pass', 'cancel', 'errors', 'failures', 'skip', 'warn', 'interrupt']:
+        for state in count_result:
             if state in result_state.keys():
+                count_result[Result.Testcount.value] += int(result_state[state])
+                count_result[state] += int(result_state[state])
                 result_link += "| %s %s |" % (state.upper(),
                                               str(result_state[state]))
         testsuite.runstatus("Run", "Successfully executed", result_link)
@@ -782,6 +795,11 @@ if __name__ == '__main__':
                                                     10),
                                                 Testsuites[test_suite].runsummary))
             summary_output.append(Testsuites[test_suite].runlink)
+
+        summary_output.append("\nFinal count summary for tests run:\n")
+        for k, val in count_result.items():
+            summary_output.append('%s %s' % (k.upper().ljust(20), val))
+
         logger.info("\n".join(summary_output))
 
     if os.path.isdir("/tmp/mux/"):
