@@ -24,7 +24,7 @@ import shlex
 import argparse
 import configparser
 import binascii
-
+from enum import Enum
 from lib.logger import logger_init
 from lib import helper
 
@@ -56,6 +56,25 @@ outputdir = ''
 pipManager = None
 
 
+class Result(Enum):
+    Testcount = "Total"
+    Pass = "pass"
+    Cancel = "cancel"
+    Error = "errors"
+    Failures = "failures"
+    Skip = "skip"
+    Warn = "warn"
+    Interrupt ="interrupt"
+
+class Testsuite_status(Enum):
+    Total = "Total"
+    Run = "Run"
+    Not_Run = "Not_Run"
+    Cant_Run = "Cant_Run"
+
+count_result = { _.value : 0 for _ in Result}
+count_testsuites_status = { _.value : 0 for _ in Testsuite_status}
+
 class TestSuite():
     """
         Class for Testsuite
@@ -75,7 +94,7 @@ class TestSuite():
         self.test = test
         self.mux = mux
         self.args = args
-        self.run = "Not_Run"
+        self.run = Testsuite_status.Not_Run.value
         self.runsummary = None
         self.runlink = None
         if use_test_dir:
@@ -382,12 +401,14 @@ def run_test(testsuite, avocado_bin, nrunner):
         status = os.system(cmd)
         status = int(bin(int(status))[2:].zfill(16)[:-8], 2)
         if status >= 2:
-            testsuite.runstatus("Not_Run", "Command execution failed")
+            testsuite.runstatus(Testsuite_status.Not_Run.value, "Command execution failed")
+            count_testsuites_status[Testsuite_status.Not_Run.value] += 1
             return
     except Exception as error:
         logger.error("Running testsuite %s failed with error\n%s",
                      testsuite.name, error)
-        testsuite.runstatus("Not_Run", "Command execution failed")
+        testsuite.runstatus(Testsuite_status.Not_Run.value, "Command execution failed")
+        count_testsuites_status[Testsuite_status.Not_Run.value] += 1
         return
     logger.info('')
     result_link = testsuite.jobdir()
@@ -396,13 +417,17 @@ def run_test(testsuite, avocado_bin, nrunner):
         result_link += "/job.log\n"
         with open(result_json, encoding="utf-8") as filep:
             result_state = json.load(filep)
-        for state in ['pass', 'cancel', 'errors', 'failures', 'skip', 'warn', 'interrupt']:
+        for state in count_result:
             if state in result_state.keys():
+                count_result[Result.Testcount.value] += int(result_state[state])
+                count_result[state] += int(result_state[state])
                 result_link += "| %s %s |" % (state.upper(),
                                               str(result_state[state]))
-        testsuite.runstatus("Run", "Successfully executed", result_link)
+        testsuite.runstatus(Testsuite_status.Run.value, "Successfully executed", result_link)
+        count_testsuites_status[Testsuite_status.Run.value] += 1
     else:
-        testsuite.runstatus("Not_Run", "Unable to find job log file")
+        testsuite.runstatus(Testsuite_status.Not_Run.value, "Unable to find job log file")
+        count_testsuites_status[Testsuite_status.Not_Run.value] += 1
     return
 
 
@@ -726,8 +751,10 @@ if __name__ == '__main__':
                     Testsuites[test_suite] = TestSuite(test_suite, outputdir,
                                                        args.vt_type,
                                                        use_test_dir=args.testdir)
-                    Testsuites[test_suite].runstatus("Cant_Run",
+                    Testsuites[test_suite].runstatus(Testsuite_status.Cant_Run.value,
                                                      "Config file not present")
+                    count_testsuites_status[Testsuite_status.Cant_Run.value] += 1
+                    Testsuites_list.append(test_suite)
                     continue
                 for test in test_list:
                     for l_key in ['mux', 'args']:
@@ -748,12 +775,14 @@ if __name__ == '__main__':
                                                    use_test_dir=args.testdir)
                 Testsuites_list.append(str(test_suite))
                 if not Testsuites[test_suite].config():
-                    Testsuites[test_suite].runstatus("Cant_Run",
+                    Testsuites[test_suite].runstatus(Testsuite_status.Cant_Run.value,
                                                      "Config file not present")
+                    count_testsuites_status[Testsuite_status.Cant_Run.value] += 1
                     continue
         # Run Tests
+        count_testsuites_status[Testsuite_status.Total.value] = len(Testsuites_list)
         for test_suite in Testsuites_list:
-            if not Testsuites[test_suite].run == "Cant_Run":
+            if not Testsuites[test_suite].run == Testsuite_status.Cant_Run.value:
                 run_test(Testsuites[test_suite], avocado_bin, args.nrunner)
                 if args.interval:
                     time.sleep(int(args.interval))
@@ -782,6 +811,15 @@ if __name__ == '__main__':
                                                     10),
                                                 Testsuites[test_suite].runsummary))
             summary_output.append(Testsuites[test_suite].runlink)
+
+        summary_output.append("\nTest suites status:\n")
+        for k, val in count_testsuites_status.items():
+            summary_output.append('%s %s' % (k.upper().ljust(20), val))
+
+        summary_output.append("\nFinal count summary for tests run:\n")
+        for k, val in count_result.items():
+            summary_output.append('%s %s' % (k.upper().ljust(20), val))
+
         logger.info("\n".join(summary_output))
 
     if os.path.isdir("/tmp/mux/"):
