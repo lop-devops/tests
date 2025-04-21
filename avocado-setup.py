@@ -214,7 +214,7 @@ def get_repo(repo, basepath):
         branch = "master"
     else:
         branch = repo[1]
-    cmd_update = "b=%s;git reset --hard && git checkout master && git remote update && (git branch|grep $b||(git checkout $b && git switch -c $b))" % branch
+    cmd_update = "b=%s;git reset --hard && git checkout master && git remote update && (git branch | grep -w $b && (git switch $b && git pull origin $b --rebase) || (git fetch origin && git switch -c $b origin/$b) || echo \"Error: Could not sync with origin/$b\")" % branch
     repo_name = repo[0].split('/')[-1].split('.git')[0]
     repo_path = os.path.join(basepath, repo_name)
     cmd_clone = "git clone %s %s" % (repo[0], repo_path)
