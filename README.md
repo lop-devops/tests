@@ -61,47 +61,48 @@ It is highly recommended for users to execute the following command as root when
 
 ```
 $ ./avocado-setup.py -h
-    usage: avocado-setup.py [-h] [--bootstrap] [--run-suite RUN_SUITE]
-                            [--output-dir OUTPUTDIR] [--use-test-dir]
-			    [--input-file INPUTFILE]
-                            [--interval-time INTERVAL] [--verbose]
-                            [--only-filter ONLY_FILTER] [--no-filter NO_FILTER]
-                            [--additional-args ADD_ARGS] [--guest-os GUEST_OS]
-                            [--vt {qemu,libvirt}] [--install] [--no-download]
-                            [--no-deps-check] [--install-deps] [--clean]
-                            [--enable-kvm]
+    usage: avocado-setup.py [-h] [--bootstrap] [--run-suite RUN_SUITE] [--output-dir OUTPUTDIR]
+                            [--use-test-dir] [--input-file INPUTFILE] [--interval-time INTERVAL]
+                            [--verbose] [--only-filter ONLY_FILTER] [--no-filter NO_FILTER]
+                            [--additional-args ADD_ARGS] [--guest-os GUEST_OS] [--vt {qemu,libvirt}]
+                            [--install] [--no-download] [--no-deps-check] [--install-deps] [--clean]
+                            [--enable-kvm] [--nrunner] [--run-tests RUN_TESTS] [--config-env CONFIG_PATH]
+                            [--config-norun NORUNTEST_PATH]
 
-    optional arguments:
-      -h, --help            show this help message and exit
-      --bootstrap           Prepare the environment for test
-      --run-suite RUN_SUITE
+    options:
+    -h, --help              show this help message and exit
+    --bootstrap             Prepare the environment for test
+    --run-suite RUN_SUITE
                             Indicate which test suite(s) to run
-      --output-dir OUTPUTDIR
+    --output-dir OUTPUTDIR
                             Specify the custom test results directory
-      --use-test-dir        Use corresponding test-name dir for storing job results
-      --input-file INPUTFILE
-                            Specify input file for custom mux values for host
-                            tests
-      --interval-time INTERVAL
+    --use-test-dir          Use corresponding test-name dir for storing job results
+    --input-file INPUTFILE
+                            Specify input file for custom mux values for host tests
+    --interval-time INTERVAL
                             Specify the interval time between tests
-      --verbose             Enable verbose output on the console
-      --only-filter ONLY_FILTER
-                            Add filters to include specific avocado tests,features
-                            from the guest test suite
-      --no-filter NO_FILTER
-                            Add filters to exclude specific avocado tests,features
-                            from the guest test suite
-      --additional-args ADD_ARGS
+    --verbose               Enable verbose output on the console
+    --only-filter ONLY_FILTER
+                            Add filters to include specific avocado tests,features from the guest test suite
+    --no-filter NO_FILTER
+                            Add filters to exclude specific avocado tests,features from the guest test suite
+    --additional-args ADD_ARGS
                             Pass additional arguments to the command
-      --guest-os GUEST_OS   Provide Guest os: Default: JeOS.27.ppc64le
-      --vt {qemu,libvirt}   Provide VT: qemu or libvirt Default: libvirt
-      --install             Install the Guest VM, if needed.
-      --no-download         To download the preinstalled guest image
-      --no-deps-check       To force wrapper not to check for dependancy packages
-      --install-deps        To force wrapper to install dependancy packages (Only
-                            for Ubuntu, SLES and yum based OS)
-      --clean               To remove/uninstall autotest, avocado from system
-      --enable-kvm          enable bootstrap kvm tests
+    --guest-os GUEST_OS     Provide Guest os: Default: JeOS.27.ppc64le
+    --vt {qemu,libvirt}     Provide VT: qemu or libvirt Default: libvirt
+    --install               Install the Guest VM, if needed.
+    --no-download           To download the preinstalled guest image
+    --no-deps-check         To force wrapper not to check for dependancy packages
+    --install-deps          To force wrapper to install dependancy packages (Only for Ubuntu, SLES and yum based OS)
+    --clean                 To remove/uninstall autotest, avocado from system
+    --enable-kvm            enable bootstrap kvm tests
+    --nrunner               enable Parallel run
+    --run-tests RUN_TESTS
+                            To run the host tests provided in the option and publish result [Note: test names(full path) and separated by comma]
+    --config-env CONFIG_PATH
+                            Specify env config path
+    --config-norun NORUNTEST_PATH
+                            Specify no run tests config path
 
 ```
 
@@ -249,6 +250,17 @@ $ ./avocado-setup.py -h
 15. `--enable-kvm`:
     > By default kvm(guest VM) tests environment is not bootstrapped, enable this flag to bootstrap KVM (guest VM) tests.
 
+16. `--nrunner`:
+    > To enable Parallel run through avocado
+
+17. `--run-tests`:
+    > To run the host tests provided in the option and publish result [Note: test names(full path) and separated by comma]
+
+18. `--config-env`:
+    > Path to a custom environment config file for Avocado setup.
+
+19. `--config-norun`:
+    > Path to a custom NORUNTEST File path
 
 ### Customizing Test Suites:
 
