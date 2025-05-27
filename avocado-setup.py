@@ -152,8 +152,16 @@ def env_check(enable_kvm):
         if packages != '':
             env_deps = packages.split(',')
     for dep in env_deps:
-        if helper.runcmd(cmd_pat % dep, ignore_status=True)[0] != 0:
-            not_found.append(dep)
+        if(dep[-1] == "$"):
+            #Substrings
+            formatted_dep=dep[:-1]
+            original_dep = formatted_dep
+        else:
+            #Absoulute strings
+            formatted_dep = f"^{dep}/"
+            original_dep = dep
+        if helper.runcmd(cmd_pat % formatted_dep, ignore_status=True)[0] != 0:
+            not_found.append(original_dep)
 
     env_deps = []
     # try to check env specific packages
