@@ -123,7 +123,7 @@ def get_env_type(enable_kvm=False):
     if env_type == "NV" and enable_kvm:
         env_type = "kvm"
     if 'ubuntu' in dist:
-        cmd_pat = "dpkg -l|grep  ' %s'"
+        cmd_pat = "apt list --installed | grep -i '%s'"
     else:
         cmd_pat = "rpm -q %s"
     return (env_ver, env_type, cmd_pat)
