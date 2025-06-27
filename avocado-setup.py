@@ -158,7 +158,10 @@ def env_check(enable_kvm):
             original_dep = formatted_dep
         else:
             #Absoulute strings
-            formatted_dep = f"^{dep}/"
+            if helper.get_dist()[0] == "ubuntu":
+                formatted_dep = f"^{dep}/"
+            else:
+                formatted_dep = dep
             original_dep = dep
         if helper.runcmd(cmd_pat % formatted_dep, ignore_status=True)[0] != 0:
             not_found.append(original_dep)
