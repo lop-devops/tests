@@ -31,17 +31,11 @@ from lib import helper
 AVOCADO_CONFIG_DIR = "%s/.config/avocado" % os.environ['HOME']
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = "%s/config/wrapper/env.conf" % BASE_PATH
-prescript = "%s/config/prescript" % BASE_PATH
-postscript = "%s/config/postscript" % BASE_PATH
-NORUNTEST_PATH = "%s/config/wrapper/no_run_tests.conf" % BASE_PATH
-TEST_CONF_PATH = "%s/config/tests/" % BASE_PATH
 CONFIGFILE = configparser.ConfigParser()
+NORUNTEST_PATH = "%s/config/wrapper/no_run_tests.conf" % BASE_PATH
 NORUNTESTFILE = configparser.ConfigParser()
 INPUTFILE = configparser.ConfigParser()
 INPUTFILE.optionxform = str
-TEST_DIR = "%s/tests" % BASE_PATH
-DATA_DIR = "%s/data" % BASE_PATH
-LOG_DIR = "%s/results" % BASE_PATH
 logger = logger_init(filepath=BASE_PATH).getlogger()
 args = None
 outputdir = ''
@@ -699,6 +693,12 @@ if __name__ == '__main__':
         logger.error(f"No Run Config Path: {args.NORUNTEST_PATH} not defined")
         sys.exit(1)
 
+    globals() ['TEST_CONF_PATH'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'test_cfg_dir')))
+    globals() ['LOG_DIR'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'results_dir')))
+    globals() ['TEST_DIR'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'test_dir')))
+    globals() ['DATA_DIR'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'data_dir')))
+    globals() ['prescript'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'pre_script_dir')))
+    globals() ['postscript'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'post_script_dir')))
     globals() ['BASE_FRAMEWORK'] = eval(CONFIGFILE.get('framework', 'base'))
     globals() ['KVM_FRAMEWORK'] = eval(CONFIGFILE.get('framework', 'kvm'))
     globals() ['OPTIONAL_FRAMEWORK'] = eval(CONFIGFILE.get('framework', 'optional'))
