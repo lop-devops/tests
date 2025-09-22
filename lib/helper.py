@@ -20,6 +20,8 @@ import re
 import sys
 import shutil
 import stat
+import platform
+import importlib.metadata
 
 from .logger import logger_init
 
@@ -72,13 +74,13 @@ def get_dist():
             if line.startswith("ID="):
                 try:
                     line = line.replace('"', '')
-                    dist = re.findall("ID=(\S+)", line)[0]
+                    dist = re.findall("ID=(\\S+)", line)[0]
                 except:
                     pass
-            elif line.startswith("VERSION="):
+            elif line.__contains__("VERSION="):
                 try:
                     line = line.replace('"', '')
-                    dist_ver = re.findall("VERSION=(\S+)", line)[0].lower().replace("-", ".")
+                    dist_ver = re.findall("VERSION=(\\S+)", line)[0].lower().replace("-", ".")
                 except:
                     pass
         fd.close()
@@ -121,7 +123,7 @@ def get_env_type(enable_kvm=False):
     if env_type == "NV" and enable_kvm:
         env_type = "kvm"
     if 'ubuntu' in dist:
-        cmd_pat = "dpkg -l|grep  ' %s'"
+        cmd_pat = "apt list --installed | grep -i '%s'"
     else:
         cmd_pat = "rpm -q %s"
     return (env_ver, env_type, cmd_pat)
@@ -179,6 +181,21 @@ def copy_dir_file(src, dest):
     logger.info("copied all files from  %s to %s" % (src, dest))
 
 
+def is_rhel8():
+    """
+    Check the OS version
+
+    :return: True if it is rhel8 False otherwise
+    """
+    system_info = platform.system()
+    release_info = platform.release()
+
+    if system_info == "Linux" and "el8" in release_info:
+        return True
+    else:
+        return False
+
+
 def remove_file(src, dest):
     """
     Remove Files from Destination Folder  which is common in Source  and Destination
@@ -202,6 +219,11 @@ class PipMagager:
         # Check for pip if not attempt install and proceed
         cmd = "%s --help >/dev/null 2>&1||(curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && python%s ./get-pip.py)" % (self.pip_cmd, sys.version_info[0])
         runcmd(cmd, err_str='Unable to install pip3')
+
+        # Get pip version
+        pip_version_split = importlib.metadata.version(f"pip").split(".")
+        self.pip_vmajor, self.pip_vminor = int(pip_version_split[0]), int(pip_version_split[1])
+
         self.uninstallitems = base_fw + opt_fw + kvm_fw
         if enable_kvm:
             self.installitems = self.uninstallitems
@@ -228,13 +250,17 @@ class PipMagager:
             pip_installcmd = '%s install -U' % self.pip_cmd
         for package in self.install_packages:
             cmd = '%s %s' % (pip_installcmd, package)
+            if (self.pip_vmajor > 23) or (self.pip_vmajor == 23 and self.pip_vminor >= 1):
+                cmd = cmd + ' --break-system-packages' # --break-system-packages introduced in pip 23.1
             runcmd(cmd,
                    err_str='Package installation via pip failed: package  %s' % package,
                    debug_str='Installing python package %s using pip' % package)
 
     def uninstall(self):
         for package in self.uninstall_packages:
-            cmd = "%s uninstall %s -y --disable-pip-version-check" % (self.pip_cmd, package)
+            cmd = '%s uninstall %s -y --disable-pip-version-check' % (self.pip_cmd, package)
+            if (self.pip_vmajor > 23) or (self.pip_vmajor == 23 and self.pip_vminor >= 1):
+                cmd = cmd + ' --break-system-packages' # --break-system-packages introduced in pip 23.1
             runcmd(cmd, ignore_status=True,
                    err_str="Error in removing package: %s" % package,
                    debug_str="Uninstalling %s" % package)

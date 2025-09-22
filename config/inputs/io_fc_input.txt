@@ -1,22 +1,27 @@
 [io_fc]
-iteration = 10
+disk = "/dev/mapper/mpathb"
+lv_disks = "/dev/mapper/mpathg"
+htx_disks = "/dev/mapper/mpathh /dev/mapper/mpathi"
+disks = "/dev/mapper/mpathc /dev/mapper/mpathd /dev/mapper/mpathe /dev/mapper/mpathf"
+wwids = '360050768108001b3a8000000000000cf 360050768108001b3a8000000000000d0'
 pci_device = "0012:01:00.0"
 pci_devices = "0012:01:00.0 0012:01:00.1"
-disk = "/dev/mapper/mpathb"
-disks = "/dev/mapper/mpathb /dev/mapper/mpathc /dev/mapper/mpathd /dev/mapper/mpathe /dev/mapper/mpathf"
-dir = "/mnt"
-lv_disks = "/dev/mapper/mpathg"
-lv_size = "40G"
-wwids = '360050768108001b3a8000000000000cf 360050768108001b3a8000000000000d0 360050768108001b3a8000000000000d1 360050768108001b3a8000000000000d2 360050768108001b3a8000000000000d3 360050768108001b3a8000000000000d4'
 module = "qla2xxx"
-htx_disks = "/dev/mapper/mpathb /dev/mapper/mpathf /dev/mapper/mpathc /dev/mapper/mpathd /dev/mapper/mpathe"
-#port bounce
-switch_name = ""
-userid = ""
-password = ""
-hmc_pwd = ''
-hmc_username = ''
+dir = "/mnt"
+lv_size = "40G"
 count = 10
 fsstress_loop = 10
 num_of_dlpar = 10
-
+iteration = 10
+run_type = 'rpm'
+max_freeze = 6
+function = 4
+err = 1
+manageSystem = ""
+userid = ""
+password = ""
+hmc_username = ""
+hmc_pwd = ""
+htx_rpm_link = ""
+switch_name = ""
+#port bounce

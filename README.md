@@ -61,47 +61,48 @@ It is highly recommended for users to execute the following command as root when
 
 ```
 $ ./avocado-setup.py -h
-    usage: avocado-setup.py [-h] [--bootstrap] [--run-suite RUN_SUITE]
-                            [--output-dir OUTPUTDIR] [--use-test-dir]
-			    [--input-file INPUTFILE]
-                            [--interval-time INTERVAL] [--verbose]
-                            [--only-filter ONLY_FILTER] [--no-filter NO_FILTER]
-                            [--additional-args ADD_ARGS] [--guest-os GUEST_OS]
-                            [--vt {qemu,libvirt}] [--install] [--no-download]
-                            [--no-deps-check] [--install-deps] [--clean]
-                            [--enable-kvm]
+    usage: avocado-setup.py [-h] [--bootstrap] [--run-suite RUN_SUITE] [--output-dir OUTPUTDIR]
+                            [--use-test-dir] [--input-file INPUTFILE] [--interval-time INTERVAL]
+                            [--verbose] [--only-filter ONLY_FILTER] [--no-filter NO_FILTER]
+                            [--additional-args ADD_ARGS] [--guest-os GUEST_OS] [--vt {qemu,libvirt}]
+                            [--install] [--no-download] [--no-deps-check] [--install-deps] [--clean]
+                            [--enable-kvm] [--nrunner] [--run-tests RUN_TESTS] [--config-env CONFIG_PATH]
+                            [--config-norun NORUNTEST_PATH]
 
-    optional arguments:
-      -h, --help            show this help message and exit
-      --bootstrap           Prepare the environment for test
-      --run-suite RUN_SUITE
+    options:
+    -h, --help              show this help message and exit
+    --bootstrap             Prepare the environment for test
+    --run-suite RUN_SUITE
                             Indicate which test suite(s) to run
-      --output-dir OUTPUTDIR
+    --output-dir OUTPUTDIR
                             Specify the custom test results directory
-      --use-test-dir        Use corresponding test-name dir for storing job results
-      --input-file INPUTFILE
-                            Specify input file for custom mux values for host
-                            tests
-      --interval-time INTERVAL
+    --use-test-dir          Use corresponding test-name dir for storing job results
+    --input-file INPUTFILE
+                            Specify input file for custom mux values for host tests
+    --interval-time INTERVAL
                             Specify the interval time between tests
-      --verbose             Enable verbose output on the console
-      --only-filter ONLY_FILTER
-                            Add filters to include specific avocado tests,features
-                            from the guest test suite
-      --no-filter NO_FILTER
-                            Add filters to exclude specific avocado tests,features
-                            from the guest test suite
-      --additional-args ADD_ARGS
+    --verbose               Enable verbose output on the console
+    --only-filter ONLY_FILTER
+                            Add filters to include specific avocado tests,features from the guest test suite
+    --no-filter NO_FILTER
+                            Add filters to exclude specific avocado tests,features from the guest test suite
+    --additional-args ADD_ARGS
                             Pass additional arguments to the command
-      --guest-os GUEST_OS   Provide Guest os: Default: JeOS.27.ppc64le
-      --vt {qemu,libvirt}   Provide VT: qemu or libvirt Default: libvirt
-      --install             Install the Guest VM, if needed.
-      --no-download         To download the preinstalled guest image
-      --no-deps-check       To force wrapper not to check for dependancy packages
-      --install-deps        To force wrapper to install dependancy packages (Only
-                            for Ubuntu, SLES and yum based OS)
-      --clean               To remove/uninstall autotest, avocado from system
-      --enable-kvm          enable bootstrap kvm tests
+    --guest-os GUEST_OS     Provide Guest os: Default: JeOS.27.ppc64le
+    --vt {qemu,libvirt}     Provide VT: qemu or libvirt Default: libvirt
+    --install               Install the Guest VM, if needed.
+    --no-download           To download the preinstalled guest image
+    --no-deps-check         To force wrapper not to check for dependancy packages
+    --install-deps          To force wrapper to install dependancy packages (Only for Ubuntu, SLES and yum based OS)
+    --clean                 To remove/uninstall autotest, avocado from system
+    --enable-kvm            enable bootstrap kvm tests
+    --nrunner               enable Parallel run
+    --run-tests RUN_TESTS
+                            To run the host tests provided in the option and publish result [Note: test names(full path) and separated by comma]
+    --config-env CONFIG_PATH
+                            Specify env config path
+    --config-norun NORUNTEST_PATH
+                            Specify no run tests config path
 
 ```
 
@@ -249,6 +250,17 @@ $ ./avocado-setup.py -h
 15. `--enable-kvm`:
     > By default kvm(guest VM) tests environment is not bootstrapped, enable this flag to bootstrap KVM (guest VM) tests.
 
+16. `--nrunner`:
+    > To enable Parallel run through avocado
+
+17. `--run-tests`:
+    > To run the host tests provided in the option and publish result [Note: test names(full path) and separated by comma]
+
+18. `--config-env`:
+    > Path to a custom environment config file for Avocado setup.
+
+19. `--config-norun`:
+    > Path to a custom NORUNTEST File path
 
 ### Customizing Test Suites:
 
@@ -293,6 +305,43 @@ So, if such tests are identified and need to be "not run" for a particular envir
   User need to popluate their pre/post scripts as  prescript and postscript directory
   * Create a directory named `prescript` inside [config/](config/) directory  and populated with pre scripts
   * Create a directory named `postscript` inside [config/](config/) directory and populated with post scripts
+
+-----
+
+### Analysis of results:
+analysis.py script is used to simplify analysis/comparison of avocado test runs by generating excel and html files (.xlsx and .html) of the same. The results.json file which gets created after avocado run, is passed as input in command line. Depending on the flag/options provided, the excel sheet will be generated.
+
+> `$ python3 analysis.py [--options] [input(s)]`
+
+#### Prerequisites:
+1. `python3`
+2. `python pandas and excel dependencies`
+    > `$ pip3 install pandas[excel]`
+
+#### Inputs:
+>After avocado run, the `results.json` file generated
+
+#### Options:
+1. `--new-analysis`:
+    > This flag is used to generate an excel file which contains analysis having test case name as "ID", test status as "Status" and fail reason if any as "Fail Reason". It can used to generate analysis on a single test run results.json file.
+
+    > `$ python3 analysis.py --new-analysis [json_file]`
+
+2. `--add-to-existing`:
+    > Work in Progress (Future Enhancement)
+
+    > This flag is used to append new results.json data to an already existing excel file. This flag can be used to compare mutliple new runs with the previous runs so that we can have our own analysis.
+
+    > `$ python3 analysis.py --add-to-existing [xlsx_file] [json_file]`
+
+3. `--compare-two-results`:
+    > This flag is used to compare exactly two results.json files by the addition of a new column "Result" in the excel file. This column will simply point which results are different from the last run of the same corresponding test names (ID). 
+    > 1. "DIFF" value represents different test status (Status)
+    > 2. "REGRESSION" value represents tests which had passed in the previous run but did not now
+    > 3. "SOLVED" value represents tests which have passed now and di not earlier
+    > 4. "" value represents no change in the test status.
+    
+    > `$ python3 analysis.py --compare-two-results [old_json_file] [new_json_file]`
 
 -----
 

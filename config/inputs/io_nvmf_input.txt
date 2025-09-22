@@ -1,0 +1,27 @@
+[io_nvmf]
+device = nvme2
+disk = "/dev/nvme1n2"
+lv_disks = "/dev/nvme1n7 /dev/nvme1n8"
+htx_disks = "/dev/nvme1n9 /dev/nvme1n10"
+disks = "/dev/nvme1n3 /dev/nvme1n4 /dev/nvme1n5 /dev/nvme1n6"
+pci_device = "002c:01:00.0"
+pci_devices = "002c:01:00.0 002c:01:00.1"
+module = "nvme_core"
+dir = "/mnt"
+lv_size = "5G"
+count = 20
+fsstress_loop = 2
+num_of_dlpar = 20
+iteration = 20
+run_type = 'rpm'
+max_freeze = 6
+function = 4
+err = 1
+manageSystem = "" 
+userid = ""
+password = ""
+hmc_username = ""
+hmc_pwd = ""
+htx_rpm_link = ""
+switch_name = ""
+#fcdlpar

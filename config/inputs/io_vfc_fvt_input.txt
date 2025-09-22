@@ -1,19 +1,55 @@
-[io_vfc]
-iteration = 10
-disk = "/dev/mapper/mpathk"
-disks = "/dev/mapper/mpathh /dev/mapper/mpathi /dev/mapper/mpathj /dev/mapper/mpathk"
-dir = "/mnt"
-lv_disks = "/dev/mapper/mpathh"
-lv_size = "40G"
-wwids = '360050768028211d8b0000000000000de 360050768028211d8b0000000000000dd 360050768028211d8b0000000000000dc 360050768028211d8b0000000000000df'
+[io_vfc_fvt]
+disk = "/dev/mapper/mpathkb"
+lv_disks = "/dev/mapper/mpathg"
+htx_disks = "/dev/mapper/mpathh /dev/mapper/mpathi"
+disks = "/dev/mapper/mpathc /dev/mapper/mpathd /dev/mapper/mpathe /dev/mapper/mpathf"
+wwids = '360050768028211d8b0000000000000de 360050768028211d8b0000000000000dd'
 module = "ibmvfc"
-htx_disks = "/dev/mapper/mpathh /dev/mapper/mpathi /dev/mapper/mpathj /dev/mapper/mpathk"
+dir = "/mnt"
+lv_size = "40G"
 count = 10
-#port bounce
-switch_name = ""
+fsstress_loop = 3
+iteration = 10
+run_type = 'rpm'
+raidname = '/dev/md127'
+vioses = 'ltc-vios1'
+vfc_count: 2
+manageSystem = ''
 userid = ""
 password = ""
-#vfcdlpar
-hmc_pwd = ''
 hmc_username = ''
-fsstress_loop = 3
+hmc_pwd = ''
+htx_rpm_link = ""
+switch_name = ""
+#vfchost_id: '100-150'
+#vfcdlpar
+#port bounce
+#skip_drc_name: 'U9040.MRX.13ECF5X-V1-C201'
+#skip_host: 'host1'
+
+[io_vfc_stress]
+disk = '/dev/mapper/mpatha'
+lv_disks = '/dev/mapper/mpathh /dev/mapper/mpathi'
+htx_disks = '/dev/mapper/mpathf /dev/mapper/mpathg'
+disks = '/dev/mapper/mpathb /dev/mapper/mpathc /dev/mapper/mpathd /dev/mapper/mpathe'
+wwids = '360050768108001b3a800000000000300'
+module = 'ibmvfc'
+dir = '/mnt'
+lv_size = 5G
+count = 50
+time_limit = 10
+fsstress_loop = 1
+run_type = 'rpm'
+raidname = '/dev/md127'
+vioses = 'ltc-vios1'
+vfc_count: 2
+manageSystem = ''
+userid = ""
+password = ""
+hmc_username = ''
+hmc_pwd = ''
+htx_rpm_link = ""
+switch_name = ""
+#vfchost_id: '100-150'
+#skip_drc_name: 'U9040.MRX.13ECF5X-V1-C201'
+#skip_host: 'host1'
