@@ -705,6 +705,7 @@ if __name__ == '__main__':
     globals() ['TEST_REPOS'] = eval(CONFIGFILE.get('tests', 'name'))
     globals() ['prescript_dir'] = CONFIGFILE.get('script-dir', 'prescriptdir')
     globals() ['postscript_dir'] = CONFIGFILE.get('script-dir', 'postscriptdir')
+    globals() ['PIP_PACKAGES'] = eval(CONFIGFILE.get('pip-package', 'package'))
 
     if helper.get_machine_type() == 'pHyp':
         args.enable_kvm = False
@@ -720,7 +721,7 @@ if __name__ == '__main__':
                                "as guest tests are requested")
                 args.enable_kvm = True
     pipManager = helper.PipMagager(BASE_FRAMEWORK, OPTIONAL_FRAMEWORK,
-                                   KVM_FRAMEWORK, args.enable_kvm)
+                                   KVM_FRAMEWORK, PIP_PACKAGES, args.enable_kvm)
     if not (args.run_suite and args.install_deps
             and args.bootstrap and args.install) and args.clean:
         # honor the spl condition, just to deep clean the environment incase needed

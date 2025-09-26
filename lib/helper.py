@@ -208,7 +208,7 @@ def remove_file(src, dest):
 
 
 class PipMagager:
-    def __init__(self, base_fw=[], opt_fw=[], kvm_fw=[], enable_kvm=False):
+    def __init__(self, base_fw=[], opt_fw=[], kvm_fw=[],pip_packages=[], enable_kvm=False):
         """
         helper class to parse, install, uninstall pip package from user config
         """
@@ -224,11 +224,11 @@ class PipMagager:
         pip_version_split = importlib.metadata.version(f"pip").split(".")
         self.pip_vmajor, self.pip_vminor = int(pip_version_split[0]), int(pip_version_split[1])
 
-        self.uninstallitems = base_fw + opt_fw + kvm_fw
+        self.uninstallitems = base_fw + opt_fw + kvm_fw + pip_packages
         if enable_kvm:
             self.installitems = self.uninstallitems
         else:
-            self.installitems = base_fw + opt_fw
+            self.installitems = base_fw + opt_fw + pip_packages
 
         self.install_packages = []
         self.uninstall_packages = []
