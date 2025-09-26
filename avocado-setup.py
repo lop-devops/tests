@@ -229,11 +229,25 @@ def get_repo(repo, basepath):
     if not isinstance(repo, tuple):
         repo = (repo, '')
 
+    cmd_default_branch = "git ls-remote --symref %s HEAD | grep '^ref:' | awk '{print $2}' | cut -d'/' -f3" % repo[0]
+    status, default_branch = helper.runcmd(cmd_default_branch, err_str="Failed to find default branch for %s repository:" % repo[0])
+    if status != 0:
+        logger.warning(f"Failed to find default branch for {repo[0]} repository, going ahead assuming master branch as default branch")
+        default_branch = "master"
     if repo[1] == '':
-        branch = "master"
+        branch = default_branch
     else:
         branch = repo[1]
-    cmd_update = "b=%s;git reset --hard && git checkout master && git remote update && (git branch | grep -w $b && (git switch $b && git pull origin $b --rebase) || (git fetch origin && git switch -c $b origin/$b) || echo \"Error: Could not sync with origin/$b\")" % branch
+    cmd_istag = "git ls-remote --refs %s %s" % (repo[0], branch)
+    status, res = helper.runcmd(cmd_istag, err_str="Failed to query refs for %s repository:" % branch)
+    if "refs" not in res:
+        logger.error(f"Invalid branch or tag '{repo[1]}' for repository '{repo[0]}'")
+        sys.exit(1)
+    if "tags" in res:
+        cmd_update = "b=%s;git fetch origin && git checkout tags/$b || (echo \"Error: Could not checkout tag $b\" >&2 && exit 1)" % branch
+    else:
+        cmd_update = "b=%s;git reset --hard && git checkout %s && git remote update && (git branch | grep -w $b && (git switch $b && git pull origin $b --rebase) || (git fetch origin && git switch -c $b origin/$b) || (echo \"Error: Could not sync with origin/$b\" >&2 && exit 1))" % (branch, default_branch)
+
     repo_name = repo[0].split('/')[-1].split('.git')[0]
     repo_path = os.path.join(basepath, repo_name)
     cmd_clone = "git clone %s %s" % (repo[0], repo_path)
