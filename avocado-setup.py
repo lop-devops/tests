@@ -24,37 +24,42 @@ import shlex
 import argparse
 import configparser
 import binascii
-
+from enum import Enum
 from lib.logger import logger_init
 from lib import helper
 
 AVOCADO_CONFIG_DIR = "%s/.config/avocado" % os.environ['HOME']
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = "%s/config/wrapper/env.conf" % BASE_PATH
-prescript = "%s/config/prescript" % BASE_PATH
-postscript = "%s/config/postscript" % BASE_PATH
-NORUNTEST_PATH = "%s/config/wrapper/no_run_tests.conf" % BASE_PATH
-TEST_CONF_PATH = "%s/config/tests/" % BASE_PATH
 CONFIGFILE = configparser.ConfigParser()
-CONFIGFILE.read(CONFIG_PATH)
+NORUNTEST_PATH = "%s/config/wrapper/no_run_tests.conf" % BASE_PATH
 NORUNTESTFILE = configparser.ConfigParser()
-NORUNTESTFILE.read(NORUNTEST_PATH)
 INPUTFILE = configparser.ConfigParser()
 INPUTFILE.optionxform = str
-BASE_FRAMEWORK = eval(CONFIGFILE.get('framework', 'base'))
-KVM_FRAMEWORK = eval(CONFIGFILE.get('framework', 'kvm'))
-OPTIONAL_FRAMEWORK = eval(CONFIGFILE.get('framework', 'optional'))
-TEST_REPOS = eval(CONFIGFILE.get('tests', 'name'))
-TEST_DIR = "%s/tests" % BASE_PATH
-DATA_DIR = "%s/data" % BASE_PATH
-LOG_DIR = "%s/results" % BASE_PATH
 logger = logger_init(filepath=BASE_PATH).getlogger()
-prescript_dir = CONFIGFILE.get('script-dir', 'prescriptdir')
-postscript_dir = CONFIGFILE.get('script-dir', 'postscriptdir')
 args = None
 outputdir = ''
 pipManager = None
 
+
+class Result(Enum):
+    Testcount = "Total"
+    Pass = "pass"
+    Cancel = "cancel"
+    Error = "errors"
+    Failures = "failures"
+    Skip = "skip"
+    Warn = "warn"
+    Interrupt ="interrupt"
+
+class Testsuite_status(Enum):
+    Total = "Total"
+    Run = "Run"
+    Not_Run = "Not_Run"
+    Cant_Run = "Cant_Run"
+
+count_result = { _.value : 0 for _ in Result}
+count_testsuites_status = { _.value : 0 for _ in Testsuite_status}
 
 class TestSuite():
     """
@@ -75,7 +80,7 @@ class TestSuite():
         self.test = test
         self.mux = mux
         self.args = args
-        self.run = "Not_Run"
+        self.run = Testsuite_status.Not_Run.value
         self.runsummary = None
         self.runlink = None
         if use_test_dir:
@@ -141,8 +146,19 @@ def env_check(enable_kvm):
         if packages != '':
             env_deps = packages.split(',')
     for dep in env_deps:
-        if helper.runcmd(cmd_pat % dep, ignore_status=True)[0] != 0:
-            not_found.append(dep)
+        if(dep[-1] == "$"):
+            #Substrings
+            formatted_dep=dep[:-1]
+            original_dep = formatted_dep
+        else:
+            #Absoulute strings
+            if helper.get_dist()[0] == "ubuntu":
+                formatted_dep = f"^{dep}/"
+            else:
+                formatted_dep = dep
+            original_dep = dep
+        if helper.runcmd(cmd_pat % formatted_dep, ignore_status=True)[0] != 0:
+            not_found.append(original_dep)
 
     env_deps = []
     # try to check env specific packages
@@ -210,22 +226,44 @@ def get_repo(repo, basepath):
     :param repo: tuple of repo link and branch(optional)
     :param basepath: base path where the repository has to be downloaded
     """
-    if not repo[1]:
-        branch = "master"
+    if not isinstance(repo, tuple):
+        repo = (repo, '')
+
+    cmd_default_branch = "git ls-remote --symref %s HEAD | grep '^ref:' | awk '{print $2}' | cut -d'/' -f3" % repo[0]
+    status, default_branch = helper.runcmd(cmd_default_branch, err_str="Failed to find default branch for %s repository:" % repo[0])
+    if status != 0:
+        logger.warning(f"Failed to find default branch for {repo[0]} repository, going ahead assuming master branch as default branch")
+        default_branch = "master"
+    if repo[1] == '':
+        branch = default_branch
     else:
         branch = repo[1]
-    cmd_update = "b=%s;git reset --hard && git checkout master && git remote update && (git branch|grep $b||(git checkout $b && git switch -c $b))" % branch
+    cmd_istag = "git ls-remote --refs %s %s" % (repo[0], branch)
+    status, res = helper.runcmd(cmd_istag, err_str="Failed to query refs for %s repository:" % branch)
+    if "refs" not in res:
+        logger.error(f"Invalid branch or tag '{repo[1]}' for repository '{repo[0]}'")
+        sys.exit(1)
+    if "tags" in res:
+        cmd_update = "b=%s;git fetch origin && git checkout tags/$b || (echo \"Error: Could not checkout tag $b\" >&2 && exit 1)" % branch
+    else:
+        cmd_update = "b=%s;git reset --hard && git checkout %s && git remote update && (git branch | grep -w $b && (git switch $b && git pull origin $b --rebase) || (git fetch origin && git switch -c $b origin/$b) || (echo \"Error: Could not sync with origin/$b\" >&2 && exit 1))" % (branch, default_branch)
+
     repo_name = repo[0].split('/')[-1].split('.git')[0]
     repo_path = os.path.join(basepath, repo_name)
     cmd_clone = "git clone %s %s" % (repo[0], repo_path)
-    if os.path.isdir(repo_path):
-        cmd = "cd %s && %s" % (repo_path, cmd_update)
+
+    logger.info("\t3. Cloning/Updating the repo: %s with branch %s under %s" % (
+                      repo_name, branch, repo_path))
+    if not os.path.isdir(repo_path):
+        cmd = "%s && cd %s" % (cmd_clone, repo_path)
     else:
-        cmd = "%s && cd %s && %s" % (cmd_clone, repo_path, cmd_update)
-    helper.runcmd(cmd,
-                  info_str="\t3. Cloning/Updating the repo: %s with branch %s under %s" % (
-                      repo_name, branch, repo_path),
-                  err_str="Failed to clone/update %s repository:" % repo_name)
+        cmd = "cd %s && [ %s = \"$(git remote get-url origin)\" ] && echo \"Repo matches\" && exit 0 \" \
+               || echo \"Repo does not match\" && exit 1 \"" % (repo_path, repo[0])
+
+    helper.runcmd(cmd, err_str="Failed to clone %s repository:, Please clean environment" % repo_name)
+
+    cmd = "cd %s && %s" % (repo_path, cmd_update)
+    helper.runcmd(cmd, err_str="Failed to update %s repository:" % repo_name)
 
 
 def create_config(logdir):
@@ -382,12 +420,14 @@ def run_test(testsuite, avocado_bin, nrunner):
         status = os.system(cmd)
         status = int(bin(int(status))[2:].zfill(16)[:-8], 2)
         if status >= 2:
-            testsuite.runstatus("Not_Run", "Command execution failed")
+            testsuite.runstatus(Testsuite_status.Not_Run.value, "Command execution failed")
+            count_testsuites_status[Testsuite_status.Not_Run.value] += 1
             return
     except Exception as error:
         logger.error("Running testsuite %s failed with error\n%s",
                      testsuite.name, error)
-        testsuite.runstatus("Not_Run", "Command execution failed")
+        testsuite.runstatus(Testsuite_status.Not_Run.value, "Command execution failed")
+        count_testsuites_status[Testsuite_status.Not_Run.value] += 1
         return
     logger.info('')
     result_link = testsuite.jobdir()
@@ -396,13 +436,17 @@ def run_test(testsuite, avocado_bin, nrunner):
         result_link += "/job.log\n"
         with open(result_json, encoding="utf-8") as filep:
             result_state = json.load(filep)
-        for state in ['pass', 'cancel', 'errors', 'failures', 'skip', 'warn', 'interrupt']:
+        for state in count_result:
             if state in result_state.keys():
+                count_result[Result.Testcount.value] += int(result_state[state])
+                count_result[state] += int(result_state[state])
                 result_link += "| %s %s |" % (state.upper(),
                                               str(result_state[state]))
-        testsuite.runstatus("Run", "Successfully executed", result_link)
+        testsuite.runstatus(Testsuite_status.Run.value, "Successfully executed", result_link)
+        count_testsuites_status[Testsuite_status.Run.value] += 1
     else:
-        testsuite.runstatus("Not_Run", "Unable to find job log file")
+        testsuite.runstatus(Testsuite_status.Not_Run.value, "Unable to find job log file")
+        count_testsuites_status[Testsuite_status.Not_Run.value] += 1
     return
 
 
@@ -511,7 +555,7 @@ def parse_test_config(test_config_file, avocado_bin, enable_kvm):
                 continue
             # split line ignoring quotes used for additional args
             line = shlex.split(line)
-            test_dic['test'] = line[0].strip('$')
+            test_dic['test'] = os.path.join(TEST_DIR, line[0].strip('$'))
             test_dic['name'] = test_dic['test'].split("/")[-1]
             if ":" in test_dic['test'].split("/")[-1]:
                 test_dic['name'] = "%s_%s" % (test_dic['name'].split(".")[0],
@@ -632,8 +676,51 @@ if __name__ == '__main__':
     parser.add_argument('--run-tests', dest="run_tests", action='store',
                         default=None,
                         help="To run the host tests provided in the option and publish result [Note: test names(full path) and separated by comma]")
+    parser.add_argument('--config-env', dest='CONFIG_PATH',
+                    action='store', default=CONFIG_PATH,
+                    help='Specify env config path')
+    parser.add_argument('--config-norun', dest='NORUNTEST_PATH',
+                    action='store', default=NORUNTEST_PATH,
+                    help='Specify no run tests config path')
 
     args = parser.parse_args()
+
+    if args.CONFIG_PATH:
+        if os.path.exists(args.CONFIG_PATH):
+            CONFIGFILE.read(args.CONFIG_PATH)
+            logger.info(f"Env Config: {args.CONFIG_PATH}")
+        else:
+            logger.error(f"Env Config Path: {args.CONFIG_PATH} does not exist")
+            sys.exit(1)
+    else:
+        logger.error(f"Env Config Path: {args.CONFIG_PATH} not defined")
+        sys.exit(1)
+
+    if args.NORUNTEST_PATH:
+        if os.path.exists(args.NORUNTEST_PATH):
+            NORUNTESTFILE.read(args.NORUNTEST_PATH)
+            logger.info(f"No Run Config: {args.NORUNTEST_PATH}")
+        else:
+            logger.error(f"No Run Config Path: {args.NORUNTEST_PATH} does not exist")
+            sys.exit(1)
+    else:
+        logger.error(f"No Run Config Path: {args.NORUNTEST_PATH} not defined")
+        sys.exit(1)
+
+    globals() ['TEST_CONF_PATH'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'test_cfg_dir')))
+    globals() ['LOG_DIR'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'results_dir')))
+    globals() ['TEST_DIR'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'test_dir')))
+    globals() ['DATA_DIR'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'data_dir')))
+    globals() ['prescript'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'pre_script_dir')))
+    globals() ['postscript'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'post_script_dir')))
+    globals() ['BASE_FRAMEWORK'] = eval(CONFIGFILE.get('framework', 'base'))
+    globals() ['KVM_FRAMEWORK'] = eval(CONFIGFILE.get('framework', 'kvm'))
+    globals() ['OPTIONAL_FRAMEWORK'] = eval(CONFIGFILE.get('framework', 'optional'))
+    globals() ['TEST_REPOS'] = eval(CONFIGFILE.get('tests', 'name'))
+    globals() ['prescript_dir'] = CONFIGFILE.get('script-dir', 'prescriptdir')
+    globals() ['postscript_dir'] = CONFIGFILE.get('script-dir', 'postscriptdir')
+    globals() ['PIP_PACKAGES'] = eval(CONFIGFILE.get('pip-package', 'package'))
+
     if helper.get_machine_type() == 'pHyp':
         args.enable_kvm = False
         if args.run_suite:
@@ -648,7 +735,7 @@ if __name__ == '__main__':
                                "as guest tests are requested")
                 args.enable_kvm = True
     pipManager = helper.PipMagager(BASE_FRAMEWORK, OPTIONAL_FRAMEWORK,
-                                   KVM_FRAMEWORK, args.enable_kvm)
+                                   KVM_FRAMEWORK, PIP_PACKAGES, args.enable_kvm)
     if not (args.run_suite and args.install_deps
             and args.bootstrap and args.install) and args.clean:
         # honor the spl condition, just to deep clean the environment incase needed
@@ -726,8 +813,10 @@ if __name__ == '__main__':
                     Testsuites[test_suite] = TestSuite(test_suite, outputdir,
                                                        args.vt_type,
                                                        use_test_dir=args.testdir)
-                    Testsuites[test_suite].runstatus("Cant_Run",
+                    Testsuites[test_suite].runstatus(Testsuite_status.Cant_Run.value,
                                                      "Config file not present")
+                    count_testsuites_status[Testsuite_status.Cant_Run.value] += 1
+                    Testsuites_list.append(test_suite)
                     continue
                 for test in test_list:
                     for l_key in ['mux', 'args']:
@@ -748,12 +837,14 @@ if __name__ == '__main__':
                                                    use_test_dir=args.testdir)
                 Testsuites_list.append(str(test_suite))
                 if not Testsuites[test_suite].config():
-                    Testsuites[test_suite].runstatus("Cant_Run",
+                    Testsuites[test_suite].runstatus(Testsuite_status.Cant_Run.value,
                                                      "Config file not present")
+                    count_testsuites_status[Testsuite_status.Cant_Run.value] += 1
                     continue
         # Run Tests
+        count_testsuites_status[Testsuite_status.Total.value] = len(Testsuites_list)
         for test_suite in Testsuites_list:
-            if not Testsuites[test_suite].run == "Cant_Run":
+            if not Testsuites[test_suite].run == Testsuite_status.Cant_Run.value:
                 run_test(Testsuites[test_suite], avocado_bin, args.nrunner)
                 if args.interval:
                     time.sleep(int(args.interval))
@@ -782,6 +873,15 @@ if __name__ == '__main__':
                                                     10),
                                                 Testsuites[test_suite].runsummary))
             summary_output.append(Testsuites[test_suite].runlink)
+
+        summary_output.append("\nTest suites status:\n")
+        for k, val in count_testsuites_status.items():
+            summary_output.append('%s %s' % (k.upper().ljust(20), val))
+
+        summary_output.append("\nFinal count summary for tests run:\n")
+        for k, val in count_result.items():
+            summary_output.append('%s %s' % (k.upper().ljust(20), val))
+
         logger.info("\n".join(summary_output))
 
     if os.path.isdir("/tmp/mux/"):

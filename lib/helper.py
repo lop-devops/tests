@@ -21,6 +21,7 @@ import sys
 import shutil
 import stat
 import platform
+import importlib.metadata
 
 from .logger import logger_init
 
@@ -122,7 +123,7 @@ def get_env_type(enable_kvm=False):
     if env_type == "NV" and enable_kvm:
         env_type = "kvm"
     if 'ubuntu' in dist:
-        cmd_pat = "dpkg -l|grep  ' %s'"
+        cmd_pat = "apt list --installed | grep -i '%s'"
     else:
         cmd_pat = "rpm -q %s"
     return (env_ver, env_type, cmd_pat)
@@ -207,7 +208,7 @@ def remove_file(src, dest):
 
 
 class PipMagager:
-    def __init__(self, base_fw=[], opt_fw=[], kvm_fw=[], enable_kvm=False):
+    def __init__(self, base_fw=[], opt_fw=[], kvm_fw=[],pip_packages=[], enable_kvm=False):
         """
         helper class to parse, install, uninstall pip package from user config
         """
@@ -218,11 +219,16 @@ class PipMagager:
         # Check for pip if not attempt install and proceed
         cmd = "%s --help >/dev/null 2>&1||(curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && python%s ./get-pip.py)" % (self.pip_cmd, sys.version_info[0])
         runcmd(cmd, err_str='Unable to install pip3')
-        self.uninstallitems = base_fw + opt_fw + kvm_fw
+
+        # Get pip version
+        pip_version_split = importlib.metadata.version(f"pip").split(".")
+        self.pip_vmajor, self.pip_vminor = int(pip_version_split[0]), int(pip_version_split[1])
+
+        self.uninstallitems = base_fw + opt_fw + kvm_fw + pip_packages
         if enable_kvm:
             self.installitems = self.uninstallitems
         else:
-            self.installitems = base_fw + opt_fw
+            self.installitems = base_fw + opt_fw + pip_packages
 
         self.install_packages = []
         self.uninstall_packages = []
@@ -243,15 +249,18 @@ class PipMagager:
         else:
             pip_installcmd = '%s install -U' % self.pip_cmd
         for package in self.install_packages:
-            cmd = '%s %s --break-system-packages' % (pip_installcmd, package)
+            cmd = '%s %s' % (pip_installcmd, package)
+            if (self.pip_vmajor > 23) or (self.pip_vmajor == 23 and self.pip_vminor >= 1):
+                cmd = cmd + ' --break-system-packages' # --break-system-packages introduced in pip 23.1
             runcmd(cmd,
                    err_str='Package installation via pip failed: package  %s' % package,
                    debug_str='Installing python package %s using pip' % package)
 
     def uninstall(self):
         for package in self.uninstall_packages:
-            cmd = "%s uninstall %s --break-system-packages -y \
-                    --disable-pip-version-check" % (self.pip_cmd, package)
+            cmd = '%s uninstall %s -y --disable-pip-version-check' % (self.pip_cmd, package)
+            if (self.pip_vmajor > 23) or (self.pip_vmajor == 23 and self.pip_vminor >= 1):
+                cmd = cmd + ' --break-system-packages' # --break-system-packages introduced in pip 23.1
             runcmd(cmd, ignore_status=True,
                    err_str="Error in removing package: %s" % package,
                    debug_str="Uninstalling %s" % package)
