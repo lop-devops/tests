@@ -257,8 +257,8 @@ def get_repo(repo, basepath):
     if not os.path.isdir(repo_path):
         cmd = "%s && cd %s" % (cmd_clone, repo_path)
     else:
-        cmd = "cd %s && [ %s = \"$(git remote get-url origin)\" ] && echo \"Repo matches\" && exit 0 \" \
-               || echo \"Repo does not match\" && exit 1 \"" % (repo_path, repo[0])
+        cmd = "cd %s && [ %s = \"$(git remote get-url origin)\" ] && (echo \"Repo matches\" && exit 0) \
+               || (echo \"Repo does not match\" && exit 1)" % (repo_path, repo[0])
 
     helper.runcmd(cmd, err_str="Failed to clone %s repository:, Please clean environment" % repo_name)
 
