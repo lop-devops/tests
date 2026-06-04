@@ -135,16 +135,27 @@ def env_check(enable_kvm):
     (env_ver, env_type, cmd_pat) = helper.get_env_type(enable_kvm)
     # try to check base packages using major version numbers
     env_ver = env_ver.split('.')[0]
+    env_ver_full = env_ver.replace('.', '_')  # Full version with underscore
     env_deps = []
-    if not CONFIGFILE.has_section('deps_%s' % env_ver):
-        # Fallback to base name if specific version is not found
-        dist = helper.get_dist()
-        env_ver = dist[0]
-
-    if CONFIGFILE.has_section('deps_%s' % env_ver):
-        packages = CONFIGFILE.get('deps_%s' % env_ver, 'packages')
+    # Try full version first (e.g., deps_sles16_1)
+    if CONFIGFILE.has_section('deps_%s' % env_ver_full):
+        packages = CONFIGFILE.get('deps_%s' % env_ver_full, 'packages')
         if packages != '':
             env_deps = packages.split(',')
+    # Fallback to major version (e.g., deps_sles16)
+    elif CONFIGFILE.has_section('deps_%s' % env_ver_major):
+        packages = CONFIGFILE.get('deps_%s' % env_ver_major, 'packages')
+        if packages != '':
+            env_deps = packages.split(',')
+    else:
+        # Fallback to base name if specific version is not found
+        dist = helper.get_dist()
+        env_ver_major = dist[0]
+        if CONFIGFILE.has_section('deps_%s' % env_ver_major):
+            packages = CONFIGFILE.get('deps_%s' % env_ver_major, 'packages')
+            if packages != '':
+                env_deps = packages.split(',')
+
     for dep in env_deps:
         if(dep[-1] == "$"):
             #Substrings
@@ -161,12 +172,19 @@ def env_check(enable_kvm):
             not_found.append(original_dep)
 
     env_deps = []
-    # try to check env specific packages
-    if CONFIGFILE.has_section('deps_%s_%s' % (env_ver, env_type)):
+    # try to check env specific packages (with full version first)
+    if CONFIGFILE.has_section('deps_%s_%s' % (env_ver_full, env_type)):
         packages = CONFIGFILE.get('deps_%s_%s' %
-                                  (env_ver, env_type), 'packages')
+                                  (env_ver_full, env_type), 'packages')
         if packages != '':
             env_deps = packages.split(',')
+    # Fallback to major version with env_type
+    elif CONFIGFILE.has_section('deps_%s_%s' % (env_ver_major, env_type)):
+        packages = CONFIGFILE.get('deps_%s_%s' %
+                                  (env_ver_major, env_type), 'packages')
+        if packages != '':
+            env_deps = packages.split(',')
+
     for dep in env_deps:
         if helper.runcmd(cmd_pat % dep, ignore_status=True)[0] != 0:
             not_found.append(dep)
