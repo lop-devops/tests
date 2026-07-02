@@ -50,7 +50,8 @@ class Result(Enum):
     Failures = "failures"
     Skip = "skip"
     Warn = "warn"
-    Interrupt ="interrupt"
+    Interrupt = "interrupt"
+
 
 class Testsuite_status(Enum):
     Total = "Total"
@@ -58,8 +59,10 @@ class Testsuite_status(Enum):
     Not_Run = "Not_Run"
     Cant_Run = "Cant_Run"
 
-count_result = { _.value : 0 for _ in Result}
-count_testsuites_status = { _.value : 0 for _ in Testsuite_status}
+
+count_result = {_.value: 0 for _ in Result}
+count_testsuites_status = {_.value: 0 for _ in Testsuite_status}
+
 
 class TestSuite():
     """
@@ -146,9 +149,9 @@ def env_check(enable_kvm):
         if packages != '':
             env_deps = packages.split(',')
     for dep in env_deps:
-        if(dep[-1] == "$"):
-            #Substrings
-            formatted_dep=dep[:-1]
+        if dep[-1] == "$":
+            # Substrings
+            formatted_dep = dep[:-1]
             original_dep = formatted_dep
         else:
             #Absoulute strings
@@ -439,6 +442,7 @@ def run_test(testsuite, avocado_bin, runner, linux_src_path):
             test_bucket = "_".join([out[1], out[2]])
             logger.info("Capturing the Gcov data.....")
             if test_bucket.startswith("io_"):
+                driver_name = None
                 with open(input_file, 'r') as file:
                     for line in file:
                         if line.startswith("module"):
@@ -712,11 +716,11 @@ if __name__ == '__main__':
                         default=None,
                         help="To run the host tests provided in the option and publish result [Note: test names(full path) and separated by comma]")
     parser.add_argument('--config-env', dest='CONFIG_PATH',
-                    action='store', default=CONFIG_PATH,
-                    help='Specify env config path')
+                        action='store', default=CONFIG_PATH,
+                        help='Specify env config path')
     parser.add_argument('--config-norun', dest='NORUNTEST_PATH',
-                    action='store', default=NORUNTEST_PATH,
-                    help='Specify no run tests config path')
+                        action='store', default=NORUNTEST_PATH,
+                        help='Specify no run tests config path')
 
     args = parser.parse_args()
 
@@ -742,19 +746,19 @@ if __name__ == '__main__':
         logger.error(f"No Run Config Path: {args.NORUNTEST_PATH} not defined")
         sys.exit(1)
 
-    globals() ['TEST_CONF_PATH'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'test_cfg_dir')))
-    globals() ['LOG_DIR'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'results_dir')))
-    globals() ['TEST_DIR'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'test_dir')))
-    globals() ['DATA_DIR'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'data_dir')))
-    globals() ['prescript'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'pre_script_dir')))
-    globals() ['postscript'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'post_script_dir')))
-    globals() ['BASE_FRAMEWORK'] = eval(CONFIGFILE.get('framework', 'base'))
-    globals() ['KVM_FRAMEWORK'] = eval(CONFIGFILE.get('framework', 'kvm'))
-    globals() ['OPTIONAL_FRAMEWORK'] = eval(CONFIGFILE.get('framework', 'optional'))
-    globals() ['TEST_REPOS'] = eval(CONFIGFILE.get('tests', 'name'))
-    globals() ['prescript_dir'] = CONFIGFILE.get('script-dir', 'prescriptdir')
-    globals() ['postscript_dir'] = CONFIGFILE.get('script-dir', 'postscriptdir')
-    globals() ['PIP_PACKAGES'] = eval(CONFIGFILE.get('pip-package', 'package'))
+    globals()['TEST_CONF_PATH'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'test_cfg_dir')))  # pylint: disable=E0602
+    globals()['LOG_DIR'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'results_dir')))
+    globals()['TEST_DIR'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'test_dir')))
+    globals()['DATA_DIR'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'data_dir')))
+    globals()['prescript'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'pre_script_dir')))
+    globals()['postscript'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'post_script_dir')))
+    globals()['BASE_FRAMEWORK'] = eval(CONFIGFILE.get('framework', 'base'))
+    globals()['KVM_FRAMEWORK'] = eval(CONFIGFILE.get('framework', 'kvm'))
+    globals()['OPTIONAL_FRAMEWORK'] = eval(CONFIGFILE.get('framework', 'optional'))
+    globals()['TEST_REPOS'] = eval(CONFIGFILE.get('tests', 'name'))
+    globals()['prescript_dir'] = CONFIGFILE.get('script-dir', 'prescriptdir')
+    globals()['postscript_dir'] = CONFIGFILE.get('script-dir', 'postscriptdir')
+    globals()['PIP_PACKAGES'] = eval(CONFIGFILE.get('pip-package', 'package'))
 
     if helper.get_machine_type() == 'pHyp':
         args.enable_kvm = False

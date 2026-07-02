@@ -211,7 +211,7 @@ def remove_file(src, dest):
 
 
 class PipMagager:
-    def __init__(self, base_fw=[], opt_fw=[], kvm_fw=[],pip_packages=[], enable_kvm=False):
+    def __init__(self, base_fw=[], opt_fw=[], kvm_fw=[], pip_packages=[], enable_kvm=False):
         """
         helper class to parse, install, uninstall pip package from user config
         """
@@ -254,7 +254,7 @@ class PipMagager:
         for package in self.install_packages:
             cmd = '%s %s' % (pip_installcmd, package)
             if (self.pip_vmajor > 23) or (self.pip_vmajor == 23 and self.pip_vminor >= 1):
-                cmd = cmd + ' --break-system-packages' # --break-system-packages introduced in pip 23.1
+                cmd = cmd + ' --break-system-packages'  # --break-system-packages introduced in pip 23.1
             runcmd(cmd,
                    err_str='Package installation via pip failed: package  %s' % package,
                    debug_str='Installing python package %s using pip' % package)
@@ -263,11 +263,10 @@ class PipMagager:
         for package in self.uninstall_packages:
             cmd = '%s uninstall %s -y --disable-pip-version-check' % (self.pip_cmd, package)
             if (self.pip_vmajor > 23) or (self.pip_vmajor == 23 and self.pip_vminor >= 1):
-                cmd = cmd + ' --break-system-packages' # --break-system-packages introduced in pip 23.1
+                cmd = cmd + ' --break-system-packages'  # --break-system-packages introduced in pip 23.1
             runcmd(cmd, ignore_status=True,
                    err_str="Error in removing package: %s" % package,
                    debug_str="Uninstalling %s" % package)
-
 
 
 class RemoteRunner:

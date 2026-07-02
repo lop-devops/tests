@@ -43,6 +43,7 @@ args: Optional[argparse.Namespace] = None
 
 logger = logger_init(filepath=BASE_PATH).getlogger()
 
+
 def create_config_inputs(orig_cfg, new_cfg, inputfile, interface, config_type):
     """
     1. Creates modified configuration file name according to type of interface from original configuration file
