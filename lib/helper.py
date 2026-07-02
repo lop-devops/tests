@@ -14,6 +14,7 @@
 # Helper methods
 # Author: Satheesh Rajendran<sathnaga@linux.vnet.ibm.com>
 
+import itertools
 import subprocess
 import os
 import re
@@ -21,6 +22,7 @@ import sys
 import shlex
 import shutil
 import stat
+import time
 import platform
 import importlib.metadata
 
@@ -379,3 +381,64 @@ class RemoteRunner:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
         return False
+
+
+def gcov_reset():
+    """
+    Resets the gcov to zero
+    """
+    gcov_cmd = "echo 1 > /sys/kernel/debug/gcov/reset"
+    if runcmd(gcov_cmd, ignore_status=False):
+        logger.info("Gcov reset successful")
+    else:
+        logger.info("Gcov reset fails")
+
+
+def gcov_code_coverage(basedir_name, test_name, driver_name=None):
+    """
+    Capture the gcov code coverage
+    """
+    if not basedir_name.endswith("/"):
+        basedir_name = basedir_name + "/"
+    linux_src_gcov = f"/sys/kernel/debug/gcov{basedir_name}"
+
+    # copying all the c files into c_files.txt
+    os.chdir(basedir_name)
+    if os.path.exists("c_files.txt"):
+        os.remove("c_files.txt")
+    cmd = f"find {linux_src_gcov} -maxdepth 6 -name '*.gcno' > c_files.txt"
+    runcmd(cmd, ignore_status=False)
+    cmd = "sed -i 's/gcno/c/g' c_files.txt"
+    runcmd(cmd, ignore_status=False)
+    if os.path.exists("object_directory"):
+        shutil.rmtree("object_directory")
+    time.sleep(3)
+    os.mkdir("object_directory")
+    os.chdir(linux_src_gcov)
+    gcno_cmd = "find -maxdepth 15 -name '*.gcno' -exec cp {} %sobject_directory \\;" % basedir_name
+    gcda_cmd = "find -maxdepth 15 -name '*.gcda' -exec cp {} %sobject_directory \\;" % basedir_name
+    runcmd(gcno_cmd, ignore_status=False)
+    runcmd(gcda_cmd, ignore_status=False)
+    os.chdir(basedir_name)
+    with open('c_files.txt', 'r+') as f:
+        for line in f.readlines():
+            line = line.strip()
+            cmd = f"gcov -n -f {line} -o {basedir_name}object_directory > coverage.txt"
+            runcmd(cmd, ignore_status=False)
+            runcmd("sed -n -i '/Function/{N;p}' coverage.txt", ignore_status=True)
+            covrg_percentage = 0
+            with open('coverage.txt', 'r+') as fs1:
+                for line1, line2 in itertools.zip_longest(*[fs1]*2):
+                    if not line2.startswith("Line"):
+                        continue
+                    out = line2.split(":")[-1]
+                    covrg_percentage = float(out.split("%")[0])
+                    if covrg_percentage > 0:
+                        line1 = line1.split(" ")[-1]
+                        line1 = line1.replace("'", "")
+                        line = line.split("gcov")[-1]
+                        if driver_name:
+                            final_line = line + ":" + line1.strip() + "::" + test_name + "::" + str(covrg_percentage) + "::" + driver_name
+                        else:
+                            final_line = line + ":" + line1.strip() + "::" + test_name + "::" + str(covrg_percentage)
+                        runcmd(f"echo '{final_line}' >> final_files.txt", ignore_status=False)
