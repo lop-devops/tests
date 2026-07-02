@@ -392,7 +392,7 @@ class HMCClient:
                 continue
             # Format: "ltcden7-vios1,vioserver"
             parts = line.split(',')
-            name     = parts[0].strip()
+            name = parts[0].strip()
             lpar_env = parts[1].strip() if len(parts) > 1 else ''
             # Match on lpar_env containing "vio" OR partition name containing "vios"
             if ('vio' in lpar_env.lower() or 'vios' in name.lower()) and name:
@@ -419,7 +419,7 @@ class HMCClient:
         if len(names) == 1:
             names = names * 2
         vios_names = ' '.join(names)
-        vios_ip    = ' '.join(v['ip'] for v in vios_list if v['ip'])
+        vios_ip = ' '.join(v['ip'] for v in vios_list if v['ip'])
         logger.info("VIOS on '%s': names=%s ips=%s", managed_system, vios_names, vios_ip)
         return {'vios_names': vios_names, 'vios_ip': vios_ip, 'vios_list': vios_list}
 

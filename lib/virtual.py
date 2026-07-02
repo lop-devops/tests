@@ -34,7 +34,6 @@ Example — remote:
 
 import re
 import os
-import platform
 
 from .helper import runcmd
 from lib.logger import logger_init
