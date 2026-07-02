@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=E0602
 # Copyright (C) IBM Corp. 2016.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -746,7 +747,7 @@ if __name__ == '__main__':
         logger.error(f"No Run Config Path: {args.NORUNTEST_PATH} not defined")
         sys.exit(1)
 
-    globals()['TEST_CONF_PATH'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'test_cfg_dir')))  # pylint: disable=E0602
+    globals()['TEST_CONF_PATH'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'test_cfg_dir')))
     globals()['LOG_DIR'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'results_dir')))
     globals()['TEST_DIR'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'test_dir')))
     globals()['DATA_DIR'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'data_dir')))

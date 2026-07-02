@@ -175,10 +175,11 @@ def create_config_file(interface_details, config_type):
             continue
 
         return create_config_inputs(orig_cfg, new_cfg, inputfile, virtual, config_type=config_type)
-    
+
     # If we reach here, interface_details was empty or all items were skipped
     logger.warning("No valid virtual interface config found in create_config_file")
     return None
+
 
 def create_config(interface_details, config_type):
     """
@@ -187,7 +188,7 @@ def create_config(interface_details, config_type):
     test_suites = []
     input_file_string = ""
     input_params = []
-    
+
     if config_type == 'pci':
         for pci in interface_details:
             if pci['is_root_disk']:
@@ -202,8 +203,8 @@ def create_config(interface_details, config_type):
                 new_cfg = "io_%s_rhel8_%s_fvt" % (pci['adapter_type'], cfg_name)
                 inputfile = "%s/io_%s_rhel8_input.txt" % (
                     BASE_INPUTFILE_PATH, pci['adapter_type'])
-            elif pci['adapter_type'] == 'network' and is_sriov(pci[
-'pci_root']):
+            elif pci['adapter_type'] == 'network' and is_sriov(
+                    pci['pci_root']):
                 orig_cfg = "io_nic_sriov_fvt"
                 new_cfg = "io_nic_sriov_%s_fvt" % cfg_name
                 inputfile = "%s/io_nic_sriov_input.txt" % BASE_INPUTFILE_PATH
@@ -214,9 +215,9 @@ def create_config(interface_details, config_type):
                     BASE_INPUTFILE_PATH, pci['adapter_type'])
             if not os.path.exists("config/tests/host/%s.cfg" % orig_cfg):
                 logger.debug("ignoring pci address %s as there is no cfg for %s",
-                            pci['pci_root'], pci['adapter_type'])
+                             pci['pci_root'], pci['adapter_type'])
                 continue
-            
+
             result = create_config_inputs(orig_cfg, new_cfg, inputfile, pci, config_type='pci')
             if result is None:
                 logger.warning("No input params found for %s; skipping input file generation", orig_cfg)
@@ -243,6 +244,7 @@ def create_config(interface_details, config_type):
         cmd = "python avocado-setup.py --run-suite %s %s" % (test_suites, input_file_string)
         return cmd
     return ""
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -495,7 +497,7 @@ if __name__ == '__main__':
                            password=args.hmc_password) as hmc:
                 _vios_info = hmc.get_vios_info(_manage_system)
                 _vios_names = _vios_info.get('vios_names', '')
-                _vios_ip    = _vios_info.get('vios_ip', '')
+                _vios_ip = _vios_info.get('vios_ip', '')
                 logger.info("VIOS names: %s  VIOS IPs: %s", _vios_names, _vios_ip)
         except Exception as _vios_err:
             logger.warning("Could not retrieve VIOS info: %s", _vios_err)
@@ -507,8 +509,8 @@ if __name__ == '__main__':
     ]:
         for _d in _details:
             _d['manageSystem'] = _manage_system
-            _d['vios_names']   = _vios_names
-            _d['vios_ip']      = _vios_ip
+            _d['vios_names'] = _vios_names
+            _d['vios_ip'] = _vios_ip
 
     # ------------------------------------------------------------------ #
     # host_ip: derive 192.168.10.<last_octet> from the local public IP.
@@ -524,7 +526,7 @@ if __name__ == '__main__':
             if pub_ip:
                 last_octet = pub_ip.split('.')[-1]
                 _d['host_ip'] = '192.168.10.%s' % last_octet
-                
+
                 # Assign host_ips based on number of interfaces
                 num_interfaces = len(_d.get('interfaces', []))
                 if num_interfaces > 1:
@@ -533,7 +535,7 @@ if __name__ == '__main__':
                 else:
                     _d['host_ips'] = '192.168.10.%s' % last_octet
                     _d['netmasks'] = '255.255.255.0'
-                
+
                 logger.info(
                     "Derived host_ip=%s host_ips=%s from public_interface_ip=%s (interfaces: %d)",
                     _d['host_ip'], _d['host_ips'], pub_ip, num_interfaces,
