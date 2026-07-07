@@ -29,7 +29,8 @@ from enum import Enum
 from lib.logger import logger_init
 from lib import helper
 
-AVOCADO_CONFIG_DIR = "%s/.config/avocado" % os.environ['HOME']
+_AVOCADO_USER_BASE = os.environ.get("VIRTUAL_ENV") or os.environ['HOME']
+AVOCADO_CONFIG_DIR = "%s/.config/avocado" % _AVOCADO_USER_BASE
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = "%s/config/wrapper/env.conf" % BASE_PATH
 CONFIGFILE = configparser.ConfigParser()
