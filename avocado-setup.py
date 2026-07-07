@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=E0602
 # Copyright (C) IBM Corp. 2016.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -50,7 +51,8 @@ class Result(Enum):
     Failures = "failures"
     Skip = "skip"
     Warn = "warn"
-    Interrupt ="interrupt"
+    Interrupt = "interrupt"
+
 
 class Testsuite_status(Enum):
     Total = "Total"
@@ -58,8 +60,10 @@ class Testsuite_status(Enum):
     Not_Run = "Not_Run"
     Cant_Run = "Cant_Run"
 
-count_result = { _.value : 0 for _ in Result}
-count_testsuites_status = { _.value : 0 for _ in Testsuite_status}
+
+count_result = {_.value: 0 for _ in Result}
+count_testsuites_status = {_.value: 0 for _ in Testsuite_status}
+
 
 class TestSuite():
     """
@@ -146,9 +150,9 @@ def env_check(enable_kvm):
         if packages != '':
             env_deps = packages.split(',')
     for dep in env_deps:
-        if(dep[-1] == "$"):
-            #Substrings
-            formatted_dep=dep[:-1]
+        if dep[-1] == "$":
+            # Substrings
+            formatted_dep = dep[:-1]
             original_dep = formatted_dep
         else:
             #Absoulute strings
@@ -379,17 +383,20 @@ def bootstrap(enable_kvm=False, guest_os=None):
             helper.copy_dir_file(postscript, postscript_dir)
 
 
-def run_test(testsuite, avocado_bin, nrunner):
+def run_test(testsuite, avocado_bin, runner, linux_src_path):
     """
     To run given testsuite
     :param testsuite: Testsuite object which has details about the tests
     :param avocado_bin: Executable path of avocado
+    :param runner: Whether to use --test-runner runner (True) or --max-parallel-tasks=1 (False)
+    :param linux_src_path: Path to kernel source for gcov coverage (or None)
     """
-
-    if not nrunner:
-        nrunner = '--test-runner runner'
+    nrun = True
+    if runner:
+        runner = '--test-runner runner'
+        nrun = False
     else:
-        nrunner = ''
+        runner = '--max-parallel-tasks=1'
 
     logger.info('')
     if 'guest' in testsuite.type:
@@ -405,7 +412,10 @@ def run_test(testsuite, avocado_bin, nrunner):
                                             testsuite.resultdir, guest_args)
     if 'host' in testsuite.type:
         logger.info("Running Host Tests Suite %s", testsuite.shortname)
-        cmd = "%s run %s %s" % (avocado_bin, nrunner, testsuite.test)
+        if nrun:
+            cmd = "%s run %s %s" % (avocado_bin, runner, os.path.join(TEST_DIR, testsuite.test))
+        else:
+            cmd = "%s run %s %s" % (avocado_bin, runner, testsuite.test)
         if testsuite.mux:
             cmd += " -m %s" % os.path.join(TEST_DIR, testsuite.mux)
         cmd += " --force-job-id %s \
@@ -415,10 +425,34 @@ def run_test(testsuite, avocado_bin, nrunner):
         if testsuite.args:
             cmd += testsuite.args
 
+    input_file = args.inputfile
     try:
+        # Resetting the gcov flag to zero if code coverage is needed
+        if linux_src_path:
+            logger.info("kernel_src path=%s" % linux_src_path)
+            if not os.path.exists(linux_src_path):
+                exit("kernel-src path is not available, please check")
+            helper.gcov_reset()
         logger.info("Running: %s", cmd)
         status = os.system(cmd)
         status = int(bin(int(status))[2:].zfill(16)[:-8], 2)
+        # Capturing the test and yaml names for gcov here
+        if linux_src_path:
+            test_name = testsuite.test + " " + testsuite.tempmux
+            out = (testsuite.name).split("_")
+            test_bucket = "_".join([out[1], out[2]])
+            logger.info("Capturing the Gcov data.....")
+            if test_bucket.startswith("io_"):
+                driver_name = None
+                with open(input_file, 'r') as file:
+                    for line in file:
+                        if line.startswith("module"):
+                            driver_name = (line.split("=")[-1]).strip()
+                helper.gcov_code_coverage(linux_src_path, test_name, driver_name)
+            else:
+                helper.gcov_code_coverage(linux_src_path, test_name)
+            helper.runcmd("cp %s/final_files.txt %s/" % (linux_src_path, outputdir),
+                          ignore_status=True)
         if status >= 2:
             testsuite.runstatus(Testsuite_status.Not_Run.value, "Command execution failed")
             count_testsuites_status[Testsuite_status.Not_Run.value] += 1
@@ -507,7 +541,7 @@ def edit_mux_file(test_config_name, mux_file_path, tmp_mux_path):
         mux_fp.write(str("\n".join(mux_str_edited)))
 
 
-def parse_test_config(test_config_file, avocado_bin, enable_kvm):
+def parse_test_config(test_config_file, avocado_bin, enable_kvm, runner):
     """
     Parses Test Config file and returns list of indivual tests dictionaries,
     with test path and yaml file path.
@@ -572,6 +606,7 @@ def parse_test_config(test_config_file, avocado_bin, enable_kvm):
                 # Handling yaml file from second param
                 if '.yaml' in line[1]:
                     test_dic['mux'] = line[1]
+                    test_dic['tempmux'] = line[1]
                     mux_flag = 1
                     test_dic['name'] = "%s_%s" % (test_dic['name'],
                                                   test_dic['mux'].split("/")[-1].split(".")[0])
@@ -588,6 +623,7 @@ def parse_test_config(test_config_file, avocado_bin, enable_kvm):
                 else:
                     arg_flag = 1
                     test_dic['args'] = " %s" % line[1]
+                    test_dic['tempmux'] = None
             count = 0
             for list_dic in test_list:
                 if test_dic['name'] == list_dic['name'].split('.')[0]:
@@ -599,13 +635,14 @@ def parse_test_config(test_config_file, avocado_bin, enable_kvm):
                 arg_flag = 1
                 test_dic['args'] = " %s" % line[2]
             test_list.append(test_dic)
-        if mux_flag == 0 and arg_flag == 0:
-            single_test_dic = {}
-            single_test_dic['name'] = test_config_name
-            single_test_dic['test'] = ''
-            for test in test_list:
-                single_test_dic['test'] += " %s" % test['test']
-            return [single_test_dic]
+        if runner:
+            if mux_flag == 0 and arg_flag == 0:
+                single_test_dic = {}
+                single_test_dic['name'] = test_config_name
+                single_test_dic['test'] = ''
+                for test in test_list:
+                    single_test_dic['test'] += " %s" % test['test']
+                return [single_test_dic]
         return test_list
     logger.error("Test Config %s not present", test_config_file)
     return []
@@ -670,18 +707,21 @@ if __name__ == '__main__':
                         help='To remove/uninstall autotest, avocado from system')
     parser.add_argument('--enable-kvm', dest="enable_kvm", action='store_true',
                         default=False, help='enable bootstrap kvm tests')
-    parser.add_argument('--nrunner', dest="nrunner", action='store_true',
-                        default=False, help='enable Parallel run')
+    parser.add_argument('--runner', dest="runner", action='store_true',
+                        default=False, help='To use legacy runner with --test-runner runner flag')
+    parser.add_argument('--code-cov', dest='linux_src_path', action='store',
+                        default=None,
+                        help='To enable code coverage. Pass the linux source path')
 
     parser.add_argument('--run-tests', dest="run_tests", action='store',
                         default=None,
                         help="To run the host tests provided in the option and publish result [Note: test names(full path) and separated by comma]")
     parser.add_argument('--config-env', dest='CONFIG_PATH',
-                    action='store', default=CONFIG_PATH,
-                    help='Specify env config path')
+                        action='store', default=CONFIG_PATH,
+                        help='Specify env config path')
     parser.add_argument('--config-norun', dest='NORUNTEST_PATH',
-                    action='store', default=NORUNTEST_PATH,
-                    help='Specify no run tests config path')
+                        action='store', default=NORUNTEST_PATH,
+                        help='Specify no run tests config path')
 
     args = parser.parse_args()
 
@@ -707,19 +747,19 @@ if __name__ == '__main__':
         logger.error(f"No Run Config Path: {args.NORUNTEST_PATH} not defined")
         sys.exit(1)
 
-    globals() ['TEST_CONF_PATH'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'test_cfg_dir')))
-    globals() ['LOG_DIR'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'results_dir')))
-    globals() ['TEST_DIR'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'test_dir')))
-    globals() ['DATA_DIR'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'data_dir')))
-    globals() ['prescript'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'pre_script_dir')))
-    globals() ['postscript'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'post_script_dir')))
-    globals() ['BASE_FRAMEWORK'] = eval(CONFIGFILE.get('framework', 'base'))
-    globals() ['KVM_FRAMEWORK'] = eval(CONFIGFILE.get('framework', 'kvm'))
-    globals() ['OPTIONAL_FRAMEWORK'] = eval(CONFIGFILE.get('framework', 'optional'))
-    globals() ['TEST_REPOS'] = eval(CONFIGFILE.get('tests', 'name'))
-    globals() ['prescript_dir'] = CONFIGFILE.get('script-dir', 'prescriptdir')
-    globals() ['postscript_dir'] = CONFIGFILE.get('script-dir', 'postscriptdir')
-    globals() ['PIP_PACKAGES'] = eval(CONFIGFILE.get('pip-package', 'package'))
+    globals()['TEST_CONF_PATH'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'test_cfg_dir')))
+    globals()['LOG_DIR'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'results_dir')))
+    globals()['TEST_DIR'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'test_dir')))
+    globals()['DATA_DIR'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'data_dir')))
+    globals()['prescript'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'pre_script_dir')))
+    globals()['postscript'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'post_script_dir')))
+    globals()['BASE_FRAMEWORK'] = eval(CONFIGFILE.get('framework', 'base'))
+    globals()['KVM_FRAMEWORK'] = eval(CONFIGFILE.get('framework', 'kvm'))
+    globals()['OPTIONAL_FRAMEWORK'] = eval(CONFIGFILE.get('framework', 'optional'))
+    globals()['TEST_REPOS'] = eval(CONFIGFILE.get('tests', 'name'))
+    globals()['prescript_dir'] = CONFIGFILE.get('script-dir', 'prescriptdir')
+    globals()['postscript_dir'] = CONFIGFILE.get('script-dir', 'postscriptdir')
+    globals()['PIP_PACKAGES'] = eval(CONFIGFILE.get('pip-package', 'package'))
 
     if helper.get_machine_type() == 'pHyp':
         args.enable_kvm = False
@@ -808,7 +848,7 @@ if __name__ == '__main__':
         for test_suite in test_suites:
             if 'host' in test_suite:
                 test_list = parse_test_config(
-                    test_suite, avocado_bin, args.enable_kvm)
+                    test_suite, avocado_bin, args.enable_kvm, args.runner)
                 if not test_list:
                     Testsuites[test_suite] = TestSuite(test_suite, outputdir,
                                                        args.vt_type,
@@ -845,7 +885,7 @@ if __name__ == '__main__':
         count_testsuites_status[Testsuite_status.Total.value] = len(Testsuites_list)
         for test_suite in Testsuites_list:
             if not Testsuites[test_suite].run == Testsuite_status.Cant_Run.value:
-                run_test(Testsuites[test_suite], avocado_bin, args.nrunner)
+                run_test(Testsuites[test_suite], avocado_bin, args.runner, args.linux_src_path)
                 if args.interval:
                     time.sleep(int(args.interval))
 
