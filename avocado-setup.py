@@ -970,8 +970,13 @@ if __name__ == '__main__':
 
         def _suite_replay_dir(suite_name):
             """Return the prior job dir to replay for this suite, or None.
-            Returns None when suite has no prior job dir (never ran)
-            so it gets a normal fresh run instead of a replay.
+
+            Priority order:
+            1. Suite has its own matched job dir and it is not complete → replay it.
+            2. An unmatched interrupted job dir exists and this suite has no own
+               job dir (i.e. it was the suite running when the job was killed and
+               no results.json was written) → claim that dir for replay.
+            3. Otherwise return None so the suite gets a normal fresh run.
             """
             if suite_name in suite_job_map and not _suite_completed(suite_name):
                 return suite_job_map[suite_name]
