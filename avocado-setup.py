@@ -980,7 +980,7 @@ if __name__ == '__main__':
             """
             if suite_name in suite_job_map and not _suite_completed(suite_name):
                 return suite_job_map[suite_name]
-            if "__interrupted__" in suite_job_map and suite_name in suite_job_map:
+            if "__interrupted__" in suite_job_map and suite_name not in suite_job_map:
                 return suite_job_map.pop("__interrupted__")
             return None
 
