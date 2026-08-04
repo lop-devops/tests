@@ -393,10 +393,12 @@ def run_test(testsuite, avocado_bin, runner, linux_src_path, resume_job_dir=None
     :param resume_job_dir: Prior avocado job dir for resume mode (or None)
     """
     if resume_job_dir:
-        # avocado replay <job_id> re-runs only not-passed tests from that job.
-        # The job_id is the trailing hex in the job dir name e.g.
-        # job-2026-07-28T04.29-07add70  →  job_id = 07add70
-        job_id = os.path.basename(resume_job_dir).rsplit('-', 1)[-1]
+        # Pass the full absolute path so avocado can resolve the job directory
+        # unambiguously without hash prefix matching (which raises ValueError
+        # "hash is not unique enough" when multiple jobs share the same 7-char
+        # suffix).  avocado's get_job_results_dir() accepts a direct path when
+        # the directory exists and contains an 'id' file.
+        replay_path = os.path.abspath(resume_job_dir)
         logger.info("Resuming suite %s via avocado replay %s",
                     testsuite.name, job_id)
         cmd = "%s replay %s" % (avocado_bin, job_id)
