@@ -399,9 +399,11 @@ def run_test(testsuite, avocado_bin, runner, linux_src_path, resume_job_dir=None
         # suffix).  avocado's get_job_results_dir() accepts a direct path when
         # the directory exists and contains an 'id' file.
         replay_path = os.path.abspath(resume_job_dir)
+        # --resume tells avocado to skip tests that already passed/were skipped
+        # in the source job, so only the remaining/interrupted tests are re-run.
         logger.info("Resuming suite %s via avocado replay %s",
-                    testsuite.name, job_id)
-        cmd = "%s replay %s" % (avocado_bin, job_id)
+                    testsuite.name, replay_path)
+        cmd = "%s replay %s --resume" % (avocado_bin, replay_path)
     else:
         nrun = True
         if runner:
