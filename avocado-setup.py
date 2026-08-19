@@ -393,13 +393,17 @@ def run_test(testsuite, avocado_bin, runner, linux_src_path, resume_job_dir=None
     :param resume_job_dir: Prior avocado job dir for resume mode (or None)
     """
     if resume_job_dir:
-        # avocado replay <job_id> re-runs only not-passed tests from that job.
-        # The job_id is the trailing hex in the job dir name e.g.
-        # job-2026-07-28T04.29-07add70  →  job_id = 07add70
-        job_id = os.path.basename(resume_job_dir).rsplit('-', 1)[-1]
+        # Pass the full absolute path so avocado can resolve the job directory
+        # unambiguously without hash prefix matching (which raises ValueError
+        # "hash is not unique enough" when multiple jobs share the same 7-char
+        # suffix).  avocado's get_job_results_dir() accepts a direct path when
+        # the directory exists and contains an 'id' file.
+        replay_path = os.path.abspath(resume_job_dir)
+        # --resume tells avocado to skip tests that already passed/were skipped
+        # in the source job, so only the remaining/interrupted tests are re-run.
         logger.info("Resuming suite %s via avocado replay %s",
-                    testsuite.name, job_id)
-        cmd = "%s replay %s" % (avocado_bin, job_id)
+                    testsuite.name, replay_path)
+        cmd = "%s replay %s --resume" % (avocado_bin, replay_path)
     else:
         nrun = True
         if runner:
@@ -966,12 +970,17 @@ if __name__ == '__main__':
 
         def _suite_replay_dir(suite_name):
             """Return the prior job dir to replay for this suite, or None.
-            Returns None when suite has no prior job dir (never ran)
-            so it gets a normal fresh run instead of a replay.
+
+            Priority order:
+            1. Suite has its own matched job dir and it is not complete → replay it.
+            2. An unmatched interrupted job dir exists and this suite has no own
+               job dir (i.e. it was the suite running when the job was killed and
+               no results.json was written) → claim that dir for replay.
+            3. Otherwise return None so the suite gets a normal fresh run.
             """
             if suite_name in suite_job_map and not _suite_completed(suite_name):
                 return suite_job_map[suite_name]
-            if "__interrupted__" in suite_job_map and suite_name in suite_job_map:
+            if "__interrupted__" in suite_job_map and suite_name not in suite_job_map:
                 return suite_job_map.pop("__interrupted__")
             return None
 
