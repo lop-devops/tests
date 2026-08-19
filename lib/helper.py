@@ -29,8 +29,31 @@ import importlib.metadata
 from .logger import logger_init
 
 LOG_PATH = os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir)))
+DEFAULT_VENV_DIR = os.path.join(LOG_PATH, '.venv')
 
 logger = logger_init(filepath=LOG_PATH).getlogger()
+
+
+def use_venv():
+    """
+    Return True when the isolated virtual-environment path is enabled.
+    Controlled by AVOCADO_USE_VENV=1 (or 'true'/'yes'/'on').
+    """
+    val = os.environ.get("AVOCADO_USE_VENV", "").lower()
+    return val in ("1", "true", "yes", "on")
+
+
+def get_venv_dir():
+    """Return the path of the optional Avocado virtual environment."""
+    return os.environ.get("AVOCADO_VENV", DEFAULT_VENV_DIR)
+
+
+def prepend_venv_to_path():
+    """Prepend the venv bin directory to PATH when venv mode is enabled."""
+    if use_venv():
+        venv_bin = os.path.join(get_venv_dir(), 'bin')
+        os.environ['PATH'] = venv_bin + os.pathsep + os.environ.get('PATH', '')
+        logger.debug("Prepended %s to PATH (venv mode)", venv_bin)
 
 
 def runcmd(cmd, ignore_status=False, err_str="", info_str="", debug_str=""):
@@ -136,6 +159,15 @@ def get_avocado_bin(ignore_status=False):
     """
     Get the avocado executable path
     """
+    if use_venv():
+        venv_avocado = os.path.join(get_venv_dir(), 'bin', 'avocado')
+        if os.path.isfile(venv_avocado) and os.access(venv_avocado, os.X_OK):
+            return venv_avocado
+        if not ignore_status:
+            logger.error("avocado command not installed or not found in venv at %s",
+                         get_venv_dir())
+            sys.exit(1)
+        return ""
     return runcmd('which avocado', ignore_status=ignore_status,
                   err_str="avocado command not installed or not found in path")[1]
 
@@ -218,14 +250,19 @@ class PipMagager:
         if sys.version_info[:2] < (3, 6):
             logger.error("System installed python version(%s) not supported, make sure python3.6 or above is installed to proceed" % sys.version_info[:2])
             sys.exit(1)
-        self.pip_cmd = "pip%s" % sys.version_info[0]
-        # Check for pip if not attempt install and proceed
-        cmd = "%s --help >/dev/null 2>&1||(curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && python%s ./get-pip.py)" % (self.pip_cmd, sys.version_info[0])
-        runcmd(cmd, err_str='Unable to install pip3')
+        self.use_venv = use_venv()
+        self.venv_dir = get_venv_dir()
 
-        # Get pip version
-        pip_version_split = importlib.metadata.version(f"pip").split(".")
-        self.pip_vmajor, self.pip_vminor = int(pip_version_split[0]), int(pip_version_split[1])
+        if self.use_venv:
+            self.python = os.path.join(self.venv_dir, 'bin', 'python')
+            self.pip_cmd = os.path.join(self.venv_dir, 'bin', 'pip')
+            logger.info("Using isolated virtual environment: %s", self.venv_dir)
+        else:
+            self.pip_cmd = "pip%s" % sys.version_info[0]
+            cmd = "%s --help >/dev/null 2>&1||(curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && python%s ./get-pip.py)" % (self.pip_cmd, sys.version_info[0])
+            runcmd(cmd, err_str='Unable to install pip3')
+            pip_version_split = importlib.metadata.version("pip").split(".")
+            self.pip_vmajor, self.pip_vminor = int(pip_version_split[0]), int(pip_version_split[1])
 
         self.uninstallitems = base_fw + opt_fw + kvm_fw + pip_packages
         if enable_kvm:
@@ -246,7 +283,33 @@ class PipMagager:
             else:
                 self.install_packages.append(item[0])
 
+    def _ensure_venv(self):
+        ready_marker = os.path.join(self.venv_dir, '.bootstrap_ok')
+        if (os.path.isdir(self.venv_dir) and os.path.isfile(self.python)
+                and os.path.isfile(ready_marker)):
+            logger.debug("Reusing existing virtual environment at %s", self.venv_dir)
+            return
+        if os.path.isdir(self.venv_dir):
+            logger.info("Removing incomplete virtual environment at %s", self.venv_dir)
+            shutil.rmtree(self.venv_dir, ignore_errors=True)
+        logger.info("Creating isolated virtual environment at %s", self.venv_dir)
+        runcmd('%s -m venv %s' % (sys.executable, self.venv_dir),
+               err_str='Failed to create virtual environment')
+        runcmd('%s -m pip install --upgrade pip "setuptools<82" wheel' % self.python,
+               err_str='Failed to upgrade pip inside venv')
+        with open(ready_marker, 'w') as marker_file:
+            marker_file.write('ok\n')
+
     def install(self):
+        if self.use_venv:
+            self._ensure_venv()
+            pip_installcmd = '%s install -U' % self.pip_cmd
+            for package in self.install_packages:
+                cmd = '%s %s' % (pip_installcmd, package)
+                runcmd(cmd,
+                       err_str='Package installation via pip failed: package  %s' % package,
+                       debug_str='Installing python package %s using pip' % package)
+            return
         if os.geteuid() != 0:
             pip_installcmd = '%s install --user -U' % self.pip_cmd
         else:
@@ -260,13 +323,41 @@ class PipMagager:
                    debug_str='Installing python package %s using pip' % package)
 
     def uninstall(self):
+        if self.use_venv:
+            return
+        self._pip_uninstall(self.pip_cmd, self.pip_vmajor, self.pip_vminor)
+
+    def uninstall_system_wide(self):
+        venv_bin = os.path.join(self.venv_dir, 'bin')
+        path_entries = os.environ.get('PATH', '').split(os.pathsep)
+        system_path = os.pathsep.join(p for p in path_entries if p and p != venv_bin)
+        pip_cmd = shutil.which('pip%s' % sys.version_info[0], path=system_path)
+        if not pip_cmd:
+            logger.debug("System pip not found, skipping system-wide Avocado cleanup")
+            return
+        status, output = subprocess.getstatusoutput('%s --version' % pip_cmd)
+        match = re.search(r'pip (\d+)\.(\d+)', output)
+        if status != 0 or not match:
+            logger.debug("Could not determine system pip version, skipping system-wide Avocado cleanup")
+            return
+        pip_vmajor, pip_vminor = int(match.group(1)), int(match.group(2))
+        logger.info("Removing system-wide Avocado packages")
+        self._pip_uninstall(pip_cmd, pip_vmajor, pip_vminor)
+
+    def _pip_uninstall(self, pip_cmd, pip_vmajor, pip_vminor):
         for package in self.uninstall_packages:
-            cmd = '%s uninstall %s -y --disable-pip-version-check' % (self.pip_cmd, package)
-            if (self.pip_vmajor > 23) or (self.pip_vmajor == 23 and self.pip_vminor >= 1):
+            cmd = '%s uninstall %s -y --disable-pip-version-check' % (pip_cmd, package)
+            if (pip_vmajor > 23) or (pip_vmajor == 23 and pip_vminor >= 1):
                 cmd = cmd + ' --break-system-packages'  # --break-system-packages introduced in pip 23.1
             runcmd(cmd, ignore_status=True,
                    err_str="Error in removing package: %s" % package,
                    debug_str="Uninstalling %s" % package)
+
+    def remove_venv(self):
+        if os.path.isdir(self.venv_dir):
+            logger.info("Cleaning up any previously existing virtual environment at %s",
+                        self.venv_dir)
+            shutil.rmtree(self.venv_dir, ignore_errors=True)
 
 
 class RemoteRunner:
@@ -427,7 +518,7 @@ def gcov_code_coverage(basedir_name, test_name, driver_name=None):
             runcmd("sed -n -i '/Function/{N;p}' coverage.txt", ignore_status=True)
             covrg_percentage = 0
             with open('coverage.txt', 'r+') as fs1:
-                for line1, line2 in itertools.zip_longest(*[fs1]*2):
+                for line1, line2 in itertools.zip_longest(*[fs1] * 2):
                     if not line2.startswith("Line"):
                         continue
                     out = line2.split(":")[-1]

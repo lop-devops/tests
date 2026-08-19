@@ -206,7 +206,12 @@ def need_bootstrap(enable_kvm=False):
     logger.debug("Check if bootstrap required")
     needs_bootstrap = False
     # Check for avocado
-    if 'no avocado ' in helper.get_avocado_bin(ignore_status=True):
+    if helper.use_venv():
+        venv_avocado = os.path.join(helper.get_venv_dir(), 'bin', 'avocado')
+        if not (os.path.isfile(venv_avocado) and os.access(venv_avocado, os.X_OK)):
+            logger.debug("Avocado needs to be installed")
+            needs_bootstrap = True
+    elif 'no avocado ' in helper.get_avocado_bin(ignore_status=True):
         logger.debug("Avocado needs to be installed")
         needs_bootstrap = True
     if enable_kvm:
@@ -305,6 +310,10 @@ def create_config(logdir):
 
     with open(avocado_conf, 'w+') as conf:
         config.write(conf)
+    if helper.use_venv():
+        venv_conf_dir = os.path.join(helper.get_venv_dir(), '.config', 'avocado')
+        os.makedirs(venv_conf_dir, exist_ok=True)
+        shutil.copy2(avocado_conf, os.path.join(venv_conf_dir, 'avocado.conf'))
 
 
 def guest_download(guestos):
@@ -504,6 +513,9 @@ def env_clean(deep=False):
     """
     logger.info("Cleaning the Environment")
     pipManager.uninstall()
+    if helper.use_venv():
+        pipManager.uninstall_system_wide()
+        pipManager.remove_venv()
     if os.path.isdir(prescript):
         helper.remove_file(prescript, prescript_dir)
 
@@ -721,6 +733,10 @@ if __name__ == '__main__':
                         help='To remove/uninstall autotest, avocado from system')
     parser.add_argument('--enable-kvm', dest="enable_kvm", action='store_true',
                         default=False, help='enable bootstrap kvm tests')
+    parser.add_argument('--use-venv', '--venv', dest='use_venv', action='store_true',
+                        default=False,
+                        help='Install Avocado into an isolated virtual environment (.venv). '
+                             'Can also be enabled with AVOCADO_USE_VENV=1')
     parser.add_argument('--runner', dest="runner", action='store_true',
                         default=False, help='To use legacy runner with --test-runner runner flag')
     parser.add_argument('--code-cov', dest='linux_src_path', action='store',
@@ -745,6 +761,12 @@ if __name__ == '__main__':
                              'suites fresh.')
 
     args = parser.parse_args()
+
+    if args.use_venv:
+        os.environ['AVOCADO_USE_VENV'] = '1'
+    if helper.use_venv() and not os.environ.get('AVOCADO_VENV'):
+        os.environ['AVOCADO_VENV'] = os.path.join(BASE_PATH, '.venv')
+    helper.prepend_venv_to_path()
 
     if args.CONFIG_PATH:
         if os.path.exists(args.CONFIG_PATH):
