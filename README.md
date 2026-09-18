@@ -295,6 +295,28 @@ $ ./avocado-setup.py -h
     > correctly identify which suites ran, which was interrupted, and which never started.
     > Works for both host and guest test suites.
 
+### Minor Version-Specific Package Dependencies:
+
+  By default, the wrapper checks for OS-level dependency packages using the **major version** of the detected OS
+  (e.g., `[deps_sles16]`). The wrapper also supports **minor version-specific** sections that take priority over
+  the major version section.
+
+  **How it works:**
+  1. The wrapper first checks for a minor version-specific section (e.g., `[deps_sles16_1]`)
+  2. If not found, it falls back to the major version section (e.g., `[deps_sles16]`)
+  3. The same lookup logic applies to environment-type packages (e.g., `[deps_sles16_1_kvm]` → `[deps_sles16_kvm]`)
+
+  **Example** — add packages only for SLES 16.1 in `config/wrapper/env.conf`:
+  ```
+  [deps_sles16]
+  packages = gcc,python311-devel,xz-devel
+
+  [deps_sles16_1]
+  packages = version-specific-package
+  ```
+
+  > **Note:** Packages in `[deps_sles16_1]` will **only** be the pre-requisite packages that need to be installed on SLES 16.1 and will not affect other SLES 16.x versions.
+
 ### Customizing Test Suites:
 
   The Host and Guest sanity suites were created to include a varied collection of tests to validate new Host OS installations.
