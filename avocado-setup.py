@@ -138,8 +138,8 @@ def env_check(enable_kvm):
     not_found = []
     (env_ver, env_type, cmd_pat) = helper.get_env_type(enable_kvm)
     # try to check base packages using major version numbers
-    env_ver = env_ver.split('.')[0]
     env_ver_full = env_ver.replace('.', '_')  # Full version with underscore
+    env_ver_major = env_ver.split('.')[0]
     env_deps = []
     # Try full version first (e.g., deps_sles16_1)
     if CONFIGFILE.has_section('deps_%s' % env_ver_full):
