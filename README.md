@@ -262,6 +262,58 @@ $ ./avocado-setup.py -h
 19. `--config-norun`:
     > Path to a custom NORUNTEST File path
 
+20. `--resume`:
+    > Use this option to resume a test run that was interrupted due to a system crash or reboot.
+    > The wrapper scans the results directory (from `--output-dir` or the default `results/` path)
+    > and automatically determines the state of each suite:
+    >
+    > | Suite state in prior run | Action on resume |
+    > |---|---|
+    > | Completed cleanly | Skipped — not re-run |
+    > | Was running at time of crash/reboot | Replayed via `avocado replay <job_id>` — only not-passed tests re-run |
+    > | Never started (system crashed before it was reached) | Normal fresh run |
+    >
+    > **Usage — first run:**
+    > ```
+    > ./avocado-setup.py --run-suite host_a,host_b,host_c
+    > ```
+    >
+    > **After system reboot/crash — same command with `--resume`:**
+    > ```
+    > ./avocado-setup.py --run-suite host_a,host_b,host_c --resume
+    > ```
+    >
+    > If a custom `--output-dir` was used in the original run, pass it again with `--resume`:
+    > ```
+    > ./avocado-setup.py --run-suite host_a,host_b,host_c --output-dir /path/to/output --resume
+    > ```
+    >
+    > NOTE: The `--run-suite` list must be identical to the original run so the wrapper can
+    > correctly identify which suites ran, which was interrupted, and which never started.
+    > Works for both host and guest test suites.
+
+### Minor Version-Specific Package Dependencies:
+
+  By default, the wrapper checks for OS-level dependency packages using the **major version** of the detected OS
+  (e.g., `[deps_sles16]`). The wrapper also supports **minor version-specific** sections that take priority over
+  the major version section.
+
+  **How it works:**
+  1. The wrapper first checks for a minor version-specific section (e.g., `[deps_sles16_1]`)
+  2. If not found, it falls back to the major version section (e.g., `[deps_sles16]`)
+  3. The same lookup logic applies to environment-type packages (e.g., `[deps_sles16_1_kvm]` → `[deps_sles16_kvm]`)
+
+  **Example** — add packages only for SLES 16.1 in `config/wrapper/env.conf`:
+  ```
+  [deps_sles16]
+  packages = gcc,python311-devel,xz-devel
+
+  [deps_sles16_1]
+  packages = version-specific-package
+  ```
+
+  > **Note:** Packages in `[deps_sles16_1]` will **only** be the pre-requisite packages that need to be installed on SLES 16.1 and will not affect other SLES 16.x versions.
+
 ### Customizing Test Suites:
 
   The Host and Guest sanity suites were created to include a varied collection of tests to validate new Host OS installations.
