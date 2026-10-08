@@ -137,9 +137,9 @@ def env_check(enable_kvm):
     logger.info("Check for environment")
     not_found = []
     (env_ver, env_type, cmd_pat) = helper.get_env_type(enable_kvm)
-    # try to check base packages using major version numbers
-    env_ver = env_ver.split('.')[0]
-    env_ver_full = env_ver.replace('.', '_')  # Full version with underscore
+    # Derive major and full version identifiers
+    env_ver_full = env_ver.replace('.', '_')   # e.g., sles16_1
+    env_ver_major = env_ver.split('.')[0]      # e.g., sles16
     env_deps = []
     # Try full version first (e.g., deps_sles16_1)
     if CONFIGFILE.has_section('deps_%s' % env_ver_full):
@@ -151,14 +151,6 @@ def env_check(enable_kvm):
         packages = CONFIGFILE.get('deps_%s' % env_ver_major, 'packages')
         if packages != '':
             env_deps = packages.split(',')
-    else:
-        # Fallback to base name if specific version is not found
-        dist = helper.get_dist()
-        env_ver_major = dist[0]
-        if CONFIGFILE.has_section('deps_%s' % env_ver_major):
-            packages = CONFIGFILE.get('deps_%s' % env_ver_major, 'packages')
-            if packages != '':
-                env_deps = packages.split(',')
 
     for dep in env_deps:
         if dep[-1] == "$":
