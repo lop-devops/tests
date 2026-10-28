@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=E0602
 # Copyright (C) IBM Corp. 2016.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -50,7 +51,8 @@ class Result(Enum):
     Failures = "failures"
     Skip = "skip"
     Warn = "warn"
-    Interrupt ="interrupt"
+    Interrupt = "interrupt"
+
 
 class Testsuite_status(Enum):
     Total = "Total"
@@ -58,8 +60,10 @@ class Testsuite_status(Enum):
     Not_Run = "Not_Run"
     Cant_Run = "Cant_Run"
 
-count_result = { _.value : 0 for _ in Result}
-count_testsuites_status = { _.value : 0 for _ in Testsuite_status}
+
+count_result = {_.value: 0 for _ in Result}
+count_testsuites_status = {_.value: 0 for _ in Testsuite_status}
+
 
 class TestSuite():
     """
@@ -134,21 +138,32 @@ def env_check(enable_kvm):
     not_found = []
     (env_ver, env_type, cmd_pat) = helper.get_env_type(enable_kvm)
     # try to check base packages using major version numbers
-    env_ver = env_ver.split('.')[0]
+    env_ver_full = env_ver.replace('.', '_')  # Full version with underscore
+    env_ver_major = env_ver.split('.')[0]
     env_deps = []
-    if not CONFIGFILE.has_section('deps_%s' % env_ver):
-        # Fallback to base name if specific version is not found
-        dist = helper.get_dist()
-        env_ver = dist[0]
-
-    if CONFIGFILE.has_section('deps_%s' % env_ver):
-        packages = CONFIGFILE.get('deps_%s' % env_ver, 'packages')
+    # Try full version first (e.g., deps_sles16_1)
+    if CONFIGFILE.has_section('deps_%s' % env_ver_full):
+        packages = CONFIGFILE.get('deps_%s' % env_ver_full, 'packages')
         if packages != '':
             env_deps = packages.split(',')
+    # Fallback to major version (e.g., deps_sles16)
+    elif CONFIGFILE.has_section('deps_%s' % env_ver_major):
+        packages = CONFIGFILE.get('deps_%s' % env_ver_major, 'packages')
+        if packages != '':
+            env_deps = packages.split(',')
+    else:
+        # Fallback to base name if specific version is not found
+        dist = helper.get_dist()
+        env_ver_major = dist[0]
+        if CONFIGFILE.has_section('deps_%s' % env_ver_major):
+            packages = CONFIGFILE.get('deps_%s' % env_ver_major, 'packages')
+            if packages != '':
+                env_deps = packages.split(',')
+
     for dep in env_deps:
-        if(dep[-1] == "$"):
-            #Substrings
-            formatted_dep=dep[:-1]
+        if dep[-1] == "$":
+            # Substrings
+            formatted_dep = dep[:-1]
             original_dep = formatted_dep
         else:
             #Absoulute strings
@@ -161,12 +176,19 @@ def env_check(enable_kvm):
             not_found.append(original_dep)
 
     env_deps = []
-    # try to check env specific packages
-    if CONFIGFILE.has_section('deps_%s_%s' % (env_ver, env_type)):
+    # try to check env specific packages (with full version first)
+    if CONFIGFILE.has_section('deps_%s_%s' % (env_ver_full, env_type)):
         packages = CONFIGFILE.get('deps_%s_%s' %
-                                  (env_ver, env_type), 'packages')
+                                  (env_ver_full, env_type), 'packages')
         if packages != '':
             env_deps = packages.split(',')
+    # Fallback to major version with env_type
+    elif CONFIGFILE.has_section('deps_%s_%s' % (env_ver_major, env_type)):
+        packages = CONFIGFILE.get('deps_%s_%s' %
+                                  (env_ver_major, env_type), 'packages')
+        if packages != '':
+            env_deps = packages.split(',')
+
     for dep in env_deps:
         if helper.runcmd(cmd_pat % dep, ignore_status=True)[0] != 0:
             not_found.append(dep)
@@ -202,7 +224,12 @@ def need_bootstrap(enable_kvm=False):
     logger.debug("Check if bootstrap required")
     needs_bootstrap = False
     # Check for avocado
-    if 'no avocado ' in helper.get_avocado_bin(ignore_status=True):
+    if helper.use_venv():
+        venv_avocado = os.path.join(helper.get_venv_dir(), 'bin', 'avocado')
+        if not (os.path.isfile(venv_avocado) and os.access(venv_avocado, os.X_OK)):
+            logger.debug("Avocado needs to be installed")
+            needs_bootstrap = True
+    elif 'no avocado ' in helper.get_avocado_bin(ignore_status=True):
         logger.debug("Avocado needs to be installed")
         needs_bootstrap = True
     if enable_kvm:
@@ -229,11 +256,25 @@ def get_repo(repo, basepath):
     if not isinstance(repo, tuple):
         repo = (repo, '')
 
+    cmd_default_branch = "git ls-remote --symref %s HEAD | grep '^ref:' | awk '{print $2}' | cut -d'/' -f3" % repo[0]
+    status, default_branch = helper.runcmd(cmd_default_branch, err_str="Failed to find default branch for %s repository:" % repo[0])
+    if status != 0:
+        logger.warning(f"Failed to find default branch for {repo[0]} repository, going ahead assuming master branch as default branch")
+        default_branch = "master"
     if repo[1] == '':
-        branch = "master"
+        branch = default_branch
     else:
         branch = repo[1]
-    cmd_update = "b=%s;git reset --hard && git checkout master && git remote update && (git branch | grep -w $b && (git switch $b && git pull origin $b --rebase) || (git fetch origin && git switch -c $b origin/$b) || echo \"Error: Could not sync with origin/$b\")" % branch
+    cmd_istag = "git ls-remote --refs %s %s" % (repo[0], branch)
+    status, res = helper.runcmd(cmd_istag, err_str="Failed to query refs for %s repository:" % branch)
+    if "refs" not in res:
+        logger.error(f"Invalid branch or tag '{repo[1]}' for repository '{repo[0]}'")
+        sys.exit(1)
+    if "tags" in res:
+        cmd_update = "b=%s;git fetch origin && git checkout tags/$b || (echo \"Error: Could not checkout tag $b\" >&2 && exit 1)" % branch
+    else:
+        cmd_update = "b=%s;git reset --hard && git checkout %s && git remote update && (git branch | grep -w $b && (git switch $b && git pull origin $b --rebase) || (git fetch origin && git switch -c $b origin/$b) || (echo \"Error: Could not sync with origin/$b\" >&2 && exit 1))" % (branch, default_branch)
+
     repo_name = repo[0].split('/')[-1].split('.git')[0]
     repo_path = os.path.join(basepath, repo_name)
     cmd_clone = "git clone %s %s" % (repo[0], repo_path)
@@ -243,8 +284,8 @@ def get_repo(repo, basepath):
     if not os.path.isdir(repo_path):
         cmd = "%s && cd %s" % (cmd_clone, repo_path)
     else:
-        cmd = "cd %s && [ %s = \"$(git remote get-url origin)\" ] && echo \"Repo matches\" && exit 0 \" \
-               || echo \"Repo does not match\" && exit 1 \"" % (repo_path, repo[0])
+        cmd = "cd %s && [ %s = \"$(git remote get-url origin)\" ] && (echo \"Repo matches\" && exit 0) \
+               || (echo \"Repo does not match\" && exit 1)" % (repo_path, repo[0])
 
     helper.runcmd(cmd, err_str="Failed to clone %s repository:, Please clean environment" % repo_name)
 
@@ -287,6 +328,10 @@ def create_config(logdir):
 
     with open(avocado_conf, 'w+') as conf:
         config.write(conf)
+    if helper.use_venv():
+        venv_conf_dir = os.path.join(helper.get_venv_dir(), '.config', 'avocado')
+        os.makedirs(venv_conf_dir, exist_ok=True)
+        shutil.copy2(avocado_conf, os.path.join(venv_conf_dir, 'avocado.conf'))
 
 
 def guest_download(guestos):
@@ -365,46 +410,90 @@ def bootstrap(enable_kvm=False, guest_os=None):
             helper.copy_dir_file(postscript, postscript_dir)
 
 
-def run_test(testsuite, avocado_bin, nrunner):
+def run_test(testsuite, avocado_bin, runner, linux_src_path, resume_job_dir=None):
     """
     To run given testsuite
     :param testsuite: Testsuite object which has details about the tests
     :param avocado_bin: Executable path of avocado
+    :param runner: Whether to use --test-runner runner (True) or --max-parallel-tasks=1 (False)
+    :param linux_src_path: Path to kernel source for gcov coverage (or None)
+    :param resume_job_dir: Prior avocado job dir for resume mode (or None)
     """
-
-    if not nrunner:
-        nrunner = '--test-runner runner'
+    if resume_job_dir:
+        # Pass the full absolute path so avocado can resolve the job directory
+        # unambiguously without hash prefix matching (which raises ValueError
+        # "hash is not unique enough" when multiple jobs share the same 7-char
+        # suffix).  avocado's get_job_results_dir() accepts a direct path when
+        # the directory exists and contains an 'id' file.
+        replay_path = os.path.abspath(resume_job_dir)
+        # --resume tells avocado to skip tests that already passed/were skipped
+        # in the source job, so only the remaining/interrupted tests are re-run.
+        logger.info("Resuming suite %s via avocado replay %s",
+                    testsuite.name, replay_path)
+        cmd = "%s replay %s --resume" % (avocado_bin, replay_path)
     else:
-        nrunner = ''
+        nrun = True
+        if runner:
+            runner = '--test-runner runner'
+            nrun = False
+        else:
+            runner = '--max-parallel-tasks=1'
 
-    logger.info('')
-    if 'guest' in testsuite.type:
-        guest_args = TestSuite.guest_add_args
-        logger.info("Running Guest Tests Suite %s", testsuite.shortname)
-        if "sanity" in testsuite.shortname:
-            guest_args = " --vt-only-filter %s " % args.guest_os
-        cmd = "%s run --vt-type %s --vt-config %s \
-                --force-job-id %s \
-                --job-results-dir %s %s" % (avocado_bin, testsuite.vt_type,
-                                            testsuite.config(),
-                                            testsuite.jobid,
-                                            testsuite.resultdir, guest_args)
-    if 'host' in testsuite.type:
-        logger.info("Running Host Tests Suite %s", testsuite.shortname)
-        cmd = "%s run %s %s" % (avocado_bin, nrunner, testsuite.test)
-        if testsuite.mux:
-            cmd += " -m %s" % os.path.join(TEST_DIR, testsuite.mux)
-        cmd += " --force-job-id %s \
-                 --job-results-dir %s %s" % (testsuite.jobid,
-                                             testsuite.resultdir,
-                                             TestSuite.host_add_args)
-        if testsuite.args:
-            cmd += testsuite.args
+        logger.info('')
+        if 'guest' in testsuite.type:
+            guest_args = TestSuite.guest_add_args
+            logger.info("Running Guest Tests Suite %s", testsuite.shortname)
+            if "sanity" in testsuite.shortname:
+                guest_args = " --vt-only-filter %s " % args.guest_os
+            cmd = "%s run --vt-type %s --vt-config %s \
+                    --force-job-id %s \
+                    --job-results-dir %s %s" % (avocado_bin, testsuite.vt_type,
+                                                testsuite.config(),
+                                                testsuite.jobid,
+                                                testsuite.resultdir, guest_args)
+        if 'host' in testsuite.type:
+            logger.info("Running Host Tests Suite %s", testsuite.shortname)
+            if nrun:
+                cmd = "%s run %s %s" % (avocado_bin, runner, os.path.join(TEST_DIR, testsuite.test))
+            else:
+                cmd = "%s run %s %s" % (avocado_bin, runner, testsuite.test)
+            if testsuite.mux:
+                cmd += " -m %s" % os.path.join(TEST_DIR, testsuite.mux)
+            cmd += " --force-job-id %s \
+                     --job-results-dir %s %s" % (testsuite.jobid,
+                                                 testsuite.resultdir,
+                                                 TestSuite.host_add_args)
+            if testsuite.args:
+                cmd += testsuite.args
 
+    input_file = args.inputfile
     try:
+        # Resetting the gcov flag to zero if code coverage is needed
+        if linux_src_path:
+            logger.info("kernel_src path=%s" % linux_src_path)
+            if not os.path.exists(linux_src_path):
+                exit("kernel-src path is not available, please check")
+            helper.gcov_reset()
         logger.info("Running: %s", cmd)
         status = os.system(cmd)
         status = int(bin(int(status))[2:].zfill(16)[:-8], 2)
+        # Capturing the test and yaml names for gcov here
+        if linux_src_path:
+            test_name = testsuite.test + " " + testsuite.tempmux
+            out = (testsuite.name).split("_")
+            test_bucket = "_".join([out[1], out[2]])
+            logger.info("Capturing the Gcov data.....")
+            if test_bucket.startswith("io_"):
+                driver_name = None
+                with open(input_file, 'r') as file:
+                    for line in file:
+                        if line.startswith("module"):
+                            driver_name = (line.split("=")[-1]).strip()
+                helper.gcov_code_coverage(linux_src_path, test_name, driver_name)
+            else:
+                helper.gcov_code_coverage(linux_src_path, test_name)
+            helper.runcmd("cp %s/final_files.txt %s/" % (linux_src_path, outputdir),
+                          ignore_status=True)
         if status >= 2:
             testsuite.runstatus(Testsuite_status.Not_Run.value, "Command execution failed")
             count_testsuites_status[Testsuite_status.Not_Run.value] += 1
@@ -442,6 +531,9 @@ def env_clean(deep=False):
     """
     logger.info("Cleaning the Environment")
     pipManager.uninstall()
+    if helper.use_venv():
+        pipManager.uninstall_system_wide()
+        pipManager.remove_venv()
     if os.path.isdir(prescript):
         helper.remove_file(prescript, prescript_dir)
 
@@ -493,7 +585,7 @@ def edit_mux_file(test_config_name, mux_file_path, tmp_mux_path):
         mux_fp.write(str("\n".join(mux_str_edited)))
 
 
-def parse_test_config(test_config_file, avocado_bin, enable_kvm):
+def parse_test_config(test_config_file, avocado_bin, enable_kvm, runner):
     """
     Parses Test Config file and returns list of indivual tests dictionaries,
     with test path and yaml file path.
@@ -558,6 +650,7 @@ def parse_test_config(test_config_file, avocado_bin, enable_kvm):
                 # Handling yaml file from second param
                 if '.yaml' in line[1]:
                     test_dic['mux'] = line[1]
+                    test_dic['tempmux'] = line[1]
                     mux_flag = 1
                     test_dic['name'] = "%s_%s" % (test_dic['name'],
                                                   test_dic['mux'].split("/")[-1].split(".")[0])
@@ -574,6 +667,7 @@ def parse_test_config(test_config_file, avocado_bin, enable_kvm):
                 else:
                     arg_flag = 1
                     test_dic['args'] = " %s" % line[1]
+                    test_dic['tempmux'] = None
             count = 0
             for list_dic in test_list:
                 if test_dic['name'] == list_dic['name'].split('.')[0]:
@@ -585,13 +679,14 @@ def parse_test_config(test_config_file, avocado_bin, enable_kvm):
                 arg_flag = 1
                 test_dic['args'] = " %s" % line[2]
             test_list.append(test_dic)
-        if mux_flag == 0 and arg_flag == 0:
-            single_test_dic = {}
-            single_test_dic['name'] = test_config_name
-            single_test_dic['test'] = ''
-            for test in test_list:
-                single_test_dic['test'] += " %s" % test['test']
-            return [single_test_dic]
+        if runner:
+            if mux_flag == 0 and arg_flag == 0:
+                single_test_dic = {}
+                single_test_dic['name'] = test_config_name
+                single_test_dic['test'] = ''
+                for test in test_list:
+                    single_test_dic['test'] += " %s" % test['test']
+                return [single_test_dic]
         return test_list
     logger.error("Test Config %s not present", test_config_file)
     return []
@@ -656,20 +751,40 @@ if __name__ == '__main__':
                         help='To remove/uninstall autotest, avocado from system')
     parser.add_argument('--enable-kvm', dest="enable_kvm", action='store_true',
                         default=False, help='enable bootstrap kvm tests')
-    parser.add_argument('--nrunner', dest="nrunner", action='store_true',
-                        default=False, help='enable Parallel run')
+    parser.add_argument('--use-venv', '--venv', dest='use_venv', action='store_true',
+                        default=False,
+                        help='Install Avocado into an isolated virtual environment (.venv). '
+                             'Can also be enabled with AVOCADO_USE_VENV=1')
+    parser.add_argument('--runner', dest="runner", action='store_true',
+                        default=False, help='To use legacy runner with --test-runner runner flag')
+    parser.add_argument('--code-cov', dest='linux_src_path', action='store',
+                        default=None,
+                        help='To enable code coverage. Pass the linux source path')
 
     parser.add_argument('--run-tests', dest="run_tests", action='store',
                         default=None,
                         help="To run the host tests provided in the option and publish result [Note: test names(full path) and separated by comma]")
     parser.add_argument('--config-env', dest='CONFIG_PATH',
-                    action='store', default=CONFIG_PATH,
-                    help='Specify env config path')
+                        action='store', default=CONFIG_PATH,
+                        help='Specify env config path')
     parser.add_argument('--config-norun', dest='NORUNTEST_PATH',
-                    action='store', default=NORUNTEST_PATH,
-                    help='Specify no run tests config path')
+                        action='store', default=NORUNTEST_PATH,
+                        help='Specify no run tests config path')
+    parser.add_argument('--resume', dest='resume',
+                        action='store_true', default=False,
+                        help='Resume an interrupted run using the same '
+                             '--output-dir results directory. Skips suites '
+                             'that completed cleanly, replays the interrupted '
+                             'suite via avocado replay, and runs remaining '
+                             'suites fresh.')
 
     args = parser.parse_args()
+
+    if args.use_venv:
+        os.environ['AVOCADO_USE_VENV'] = '1'
+    if helper.use_venv() and not os.environ.get('AVOCADO_VENV'):
+        os.environ['AVOCADO_VENV'] = os.path.join(BASE_PATH, '.venv')
+    helper.prepend_venv_to_path()
 
     if args.CONFIG_PATH:
         if os.path.exists(args.CONFIG_PATH):
@@ -693,18 +808,19 @@ if __name__ == '__main__':
         logger.error(f"No Run Config Path: {args.NORUNTEST_PATH} not defined")
         sys.exit(1)
 
-    globals() ['TEST_CONF_PATH'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'test_cfg_dir')))
-    globals() ['LOG_DIR'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'results_dir')))
-    globals() ['TEST_DIR'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'test_dir')))
-    globals() ['DATA_DIR'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'data_dir')))
-    globals() ['prescript'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'pre_script_dir')))
-    globals() ['postscript'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'post_script_dir')))
-    globals() ['BASE_FRAMEWORK'] = eval(CONFIGFILE.get('framework', 'base'))
-    globals() ['KVM_FRAMEWORK'] = eval(CONFIGFILE.get('framework', 'kvm'))
-    globals() ['OPTIONAL_FRAMEWORK'] = eval(CONFIGFILE.get('framework', 'optional'))
-    globals() ['TEST_REPOS'] = eval(CONFIGFILE.get('tests', 'name'))
-    globals() ['prescript_dir'] = CONFIGFILE.get('script-dir', 'prescriptdir')
-    globals() ['postscript_dir'] = CONFIGFILE.get('script-dir', 'postscriptdir')
+    globals()['TEST_CONF_PATH'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'test_cfg_dir')))
+    globals()['LOG_DIR'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'results_dir')))
+    globals()['TEST_DIR'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'test_dir')))
+    globals()['DATA_DIR'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'data_dir')))
+    globals()['prescript'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'pre_script_dir')))
+    globals()['postscript'] = os.path.join(BASE_PATH, eval(CONFIGFILE.get('paths', 'post_script_dir')))
+    globals()['BASE_FRAMEWORK'] = eval(CONFIGFILE.get('framework', 'base'))
+    globals()['KVM_FRAMEWORK'] = eval(CONFIGFILE.get('framework', 'kvm'))
+    globals()['OPTIONAL_FRAMEWORK'] = eval(CONFIGFILE.get('framework', 'optional'))
+    globals()['TEST_REPOS'] = eval(CONFIGFILE.get('tests', 'name'))
+    globals()['prescript_dir'] = CONFIGFILE.get('script-dir', 'prescriptdir')
+    globals()['postscript_dir'] = CONFIGFILE.get('script-dir', 'postscriptdir')
+    globals()['PIP_PACKAGES'] = eval(CONFIGFILE.get('pip-package', 'package'))
 
     if helper.get_machine_type() == 'pHyp':
         args.enable_kvm = False
@@ -720,7 +836,7 @@ if __name__ == '__main__':
                                "as guest tests are requested")
                 args.enable_kvm = True
     pipManager = helper.PipMagager(BASE_FRAMEWORK, OPTIONAL_FRAMEWORK,
-                                   KVM_FRAMEWORK, args.enable_kvm)
+                                   KVM_FRAMEWORK, PIP_PACKAGES, args.enable_kvm)
     if not (args.run_suite and args.install_deps
             and args.bootstrap and args.install) and args.clean:
         # honor the spl condition, just to deep clean the environment incase needed
@@ -793,7 +909,7 @@ if __name__ == '__main__':
         for test_suite in test_suites:
             if 'host' in test_suite:
                 test_list = parse_test_config(
-                    test_suite, avocado_bin, args.enable_kvm)
+                    test_suite, avocado_bin, args.enable_kvm, args.runner)
                 if not test_list:
                     Testsuites[test_suite] = TestSuite(test_suite, outputdir,
                                                        args.vt_type,
@@ -826,13 +942,113 @@ if __name__ == '__main__':
                                                      "Config file not present")
                     count_testsuites_status[Testsuite_status.Cant_Run.value] += 1
                     continue
+        # Build suite_job_map: scan outputdir job-* dirs and match each to a
+        # suite name so the run loop knows which suites completed, which was
+        # interrupted, and which never ran.
+        suite_job_map = {}
+        if args.resume:
+            if not os.path.isdir(outputdir):
+                logger.error("RESUME: results dir does not exist: %s", outputdir)
+                sys.exit(1)
+            # host suites: match test file basename in avocado test IDs
+            # guest suites: match suite shortname in avocado VT test IDs
+            basename_to_suite = {}
+            shortname_to_suite = {}
+            for ts_name in Testsuites_list:
+                ts = Testsuites[ts_name]
+                if ts.test:
+                    basename_to_suite[os.path.basename(ts.test.rstrip('$'))] = ts_name
+                elif ts.type == 'guest':
+                    shortname_to_suite[ts.shortname] = ts_name
+            for entry in sorted(os.listdir(outputdir)):
+                job_path = os.path.join(outputdir, entry)
+                if not entry.startswith("job-") or not os.path.isdir(job_path):
+                    continue
+                rj = os.path.join(job_path, "results.json")
+                matched = None
+                if os.path.isfile(rj):
+                    try:
+                        with open(rj, encoding="utf-8") as fp:
+                            rdata = json.load(fp)
+                        for t in rdata.get("tests", []):
+                            tid = t.get("id", "")
+                            tbase = tid.split(":")[0].split("/")[-1]
+                            if tbase in basename_to_suite:
+                                matched = basename_to_suite[tbase]
+                                break
+                            for sname, ts_name in shortname_to_suite.items():
+                                if sname in tid:
+                                    matched = ts_name
+                                    break
+                            if matched:
+                                break
+                    except (OSError, json.JSONDecodeError):
+                        pass
+                if matched:
+                    suite_job_map[matched] = job_path
+                else:
+                    suite_job_map.setdefault("__interrupted__", job_path)
+            logger.info("RESUME: suite to job dir map from %s: %s",
+                        outputdir, suite_job_map)
+
+        def _suite_completed(suite_name):
+            """Return True if suite has a prior job with a clean results.json.
+            A suite is complete when total > 0 and interrupt == 0.
+            """
+            if suite_name not in suite_job_map:
+                return False
+            rj = os.path.join(suite_job_map[suite_name], "results.json")
+            if not os.path.isfile(rj):
+                return False
+            try:
+                with open(rj, encoding="utf-8") as fp:
+                    d = json.load(fp)
+                return (int(d.get("total", 0)) > 0 and
+                        int(d.get("interrupt", 0)) == 0)
+            except (OSError, json.JSONDecodeError):
+                return False
+
+        def _suite_replay_dir(suite_name):
+            """Return the prior job dir to replay for this suite, or None.
+
+            Priority order:
+            1. Suite has its own matched job dir and it is not complete → replay it.
+            2. An unmatched interrupted job dir exists and this suite has no own
+               job dir (i.e. it was the suite running when the job was killed and
+               no results.json was written) → claim that dir for replay.
+            3. Otherwise return None so the suite gets a normal fresh run.
+            """
+            if suite_name in suite_job_map and not _suite_completed(suite_name):
+                return suite_job_map[suite_name]
+            if "__interrupted__" in suite_job_map and suite_name not in suite_job_map:
+                return suite_job_map.pop("__interrupted__")
+            return None
+
         # Run Tests
         count_testsuites_status[Testsuite_status.Total.value] = len(Testsuites_list)
         for test_suite in Testsuites_list:
-            if not Testsuites[test_suite].run == Testsuite_status.Cant_Run.value:
-                run_test(Testsuites[test_suite], avocado_bin, args.nrunner)
-                if args.interval:
-                    time.sleep(int(args.interval))
+            if Testsuites[test_suite].run == Testsuite_status.Cant_Run.value:
+                continue
+            if args.resume:
+                if _suite_completed(test_suite):
+                    logger.info("RESUME: skipping '%s' (completed in prior run)",
+                                test_suite)
+                    Testsuites[test_suite].runstatus(
+                        Testsuite_status.Run.value,
+                        "Skipped (completed in prior run)")
+                    count_testsuites_status[Testsuite_status.Run.value] += 1
+                else:
+                    replay_dir = _suite_replay_dir(test_suite)
+                    if replay_dir:
+                        logger.info("RESUME: replaying '%s' from %s",
+                                    test_suite, replay_dir)
+                    run_test(Testsuites[test_suite], avocado_bin, args.runner,
+                             args.linux_src_path, replay_dir)
+            else:
+                run_test(Testsuites[test_suite], avocado_bin, args.runner,
+                         args.linux_src_path)
+            if args.interval:
+                time.sleep(int(args.interval))
 
         # Finding the space needed for formatting result summary
         test_name_list = []

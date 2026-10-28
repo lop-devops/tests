@@ -23,6 +23,12 @@ import os
 import platform
 from .helper import runcmd, is_rhel8
 from lib.logger import logger_init
+
+
+class NWException(Exception):
+    """Exception for network/PCI related errors."""
+
+
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 logger = logger_init(filepath=BASE_PATH).getlogger()
 
@@ -307,8 +313,8 @@ def get_interfaces_in_pci_address(pci_address, pci_class):
     if not pci_class or not os.path.isdir(pci_class_path):
         return ""
     return [interface for interface in os.listdir(pci_class_path)
-            if os.path.islink(os.path.join(pci_class_path, interface)) and pci_address \
-                              in os.readlink(os.path.join(pci_class_path, interface))]
+            if os.path.islink(os.path.join(pci_class_path, interface)) and pci_address
+            in os.readlink(os.path.join(pci_class_path, interface))]
 
 
 def get_pci_class_name(pci_address):
@@ -632,6 +638,7 @@ def get_secondary_ioa(primary_ioa):
         if serial == ioa_detail['serial']:
             return ioa_detail['ioa']
     return ''
+
 
 def is_sriov(pci_address):
     """
