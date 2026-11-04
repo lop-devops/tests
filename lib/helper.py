@@ -199,6 +199,27 @@ def is_rhel8():
         return False
 
 
+def get_virtinstall_extra_args():
+    """
+    Return extra virt-install arguments needed on the host
+
+    virt-install adds a qemu-xhci USB controller by default. QEMU builds
+    which do not provide that device (e.g. RHEL 10.2) fail with
+    "USB controller model 'qemu-xhci' not supported in this QEMU binary",
+    so the USB controller has to be disabled for them.
+
+    :return: extra virt-install arguments, empty string if none are needed
+    """
+    for emulator in ("/usr/bin/qemu-system-ppc64", "/usr/libexec/qemu-kvm"):
+        if os.path.exists(emulator):
+            status, output = runcmd("%s -machine pseries -device help"
+                                    % emulator, ignore_status=True)
+            if status == 0 and "qemu-xhci" not in output:
+                return "--controller type=usb,model=none"
+            break
+    return ""
+
+
 def remove_file(src, dest):
     """
     Remove Files from Destination Folder  which is common in Source  and Destination

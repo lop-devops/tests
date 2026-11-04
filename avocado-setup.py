@@ -114,6 +114,10 @@ class TestSuite():
                                                             self.shortname)
             cmd = 'cp -f %s %s' % (local_cfg, cfg)
             os.system(cmd)
+            extra_args = helper.get_virtinstall_extra_args()
+            if extra_args:
+                with open(cfg, 'a') as cfg_fd:
+                    cfg_fd.write("\nvirtinstall_extra_args = %s\n" % extra_args)
             self.conf = cfg
         elif self.type == 'host':
             local_cfg = "%s/%s/%s.cfg" % (TEST_CONF_PATH,
