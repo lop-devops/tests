@@ -231,6 +231,22 @@ def is_rhel8():
         return False
 
 
+def get_qemu_emulator():
+    """
+    Return the QEMU emulator binary to use for guest tests
+
+    Older releases provide /usr/bin/qemu-system-ppc64, newer ones (RHEL 10
+    and later) ship only /usr/libexec/qemu-kvm.
+
+    :return: path of the emulator binary which exists on the host
+    """
+    default = "/usr/bin/qemu-system-ppc64"
+    alternate = "/usr/libexec/qemu-kvm"
+    if not os.path.exists(default) and os.path.exists(alternate):
+        return alternate
+    return default
+
+
 def remove_file(src, dest):
     """
     Remove Files from Destination Folder  which is common in Source  and Destination
