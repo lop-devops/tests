@@ -114,6 +114,11 @@ class TestSuite():
                                                             self.shortname)
             cmd = 'cp -f %s %s' % (local_cfg, cfg)
             os.system(cmd)
+            emulator = helper.get_qemu_emulator()
+            if emulator != '/usr/bin/qemu-system-ppc64':
+                cmd = "sed -i 's#/usr/bin/qemu-system-ppc64#%s#g' %s" % (
+                    emulator, cfg)
+                os.system(cmd)
             self.conf = cfg
         elif self.type == 'host':
             local_cfg = "%s/%s/%s.cfg" % (TEST_CONF_PATH,
